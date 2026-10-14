@@ -1,9 +1,16 @@
 import { type Palette, pixelColor } from "./skins.ts";
 import { type Frame, HALO, haloFrame, SPRITE_SIZE } from "./sprite.ts";
 
-/** Taille d'1 rem en px CSS (html { font-size: calc(100vw / 47.5) }). */
+/** Position du pixel (0, 0) du sprite 20 x 20 dans une grille plus grande. */
+export interface Origin {
+  x: number;
+  y: number;
+}
+const NO_ORIGIN: Origin = { x: 0, y: 0 };
+
+/** Taille d'1 rem en px CSS (dans l'app : html { font-size: calc(100vw / 47.5) }). */
 export function remPx(): number {
-  return window.innerWidth / 47.5;
+  return Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 }
 
 /**
@@ -16,7 +23,7 @@ export class SpriteCanvas {
   private readonly ctx: CanvasRenderingContext2D;
   private devicePx = 1;
   private dpr = 1;
-  private last: { rows: Frame; palette: Palette; halo: boolean } | null = null;
+  private last: { rows: Frame; palette: Palette; halo: boolean; origin: Origin } | null = null;
   /** Taille d'un pixel-sprite en px CSS. */
   cssPx = 5;
 
@@ -41,35 +48,41 @@ export class SpriteCanvas {
     this.devicePx = devicePx;
     this.dpr = dpr;
     this.cssPx = devicePx / dpr;
-    if (this.last) this.paint(this.last.rows, this.last.palette, this.last.halo);
+    if (this.last) this.paint(this.last.rows, this.last.palette, this.last.halo, this.last.origin);
     return true;
   }
 
-  draw(rows: Frame, palette: Palette, halo: boolean): void {
+  /**
+   * Dessine une grille. `origin` indique où se trouve le sprite 20 x 20 dans `rows`
+   * (les frames animées ont une marge) : des marges négatives gardent le chat
+   * exactement à la même place, quelle que soit la taille de la grille.
+   */
+  draw(rows: Frame, palette: Palette, halo: boolean, origin: Origin = NO_ORIGIN): void {
     const l = this.last;
-    if (l && l.rows === rows && l.palette === palette && l.halo === halo) return;
-    this.paint(rows, palette, halo);
+    if (l && l.rows === rows && l.palette === palette && l.halo === halo && l.origin === origin) return;
+    this.paint(rows, palette, halo, origin);
   }
 
-  private paint(rows: Frame, palette: Palette, halo: boolean): void {
-    this.last = { rows, palette, halo };
+  private paint(rows: Frame, palette: Palette, halo: boolean, origin: Origin): void {
+    this.last = { rows, palette, halo, origin };
     const grid = halo ? haloFrame(rows) : rows;
-    const cols = halo ? SPRITE_SIZE + 2 : SPRITE_SIZE;
+    const cols = grid[0]?.length ?? SPRITE_SIZE;
+    const lines = grid.length;
+    // Le halo agrandit la grille d'1 pixel-sprite de chaque côté.
+    const ox = origin.x + (halo ? 1 : 0);
+    const oy = origin.y + (halo ? 1 : 0);
     const d = this.devicePx;
-    const size = cols * d;
-    if (this.el.width !== size) {
-      this.el.width = size;
-      this.el.height = size;
-    }
-    const css = `${size / this.dpr}px`;
-    this.el.style.width = css;
-    this.el.style.height = css;
-    // Le halo agrandit la grille d'1 pixel-sprite de chaque côté : marge négative pour
-    // que le chat reste exactement à la même place.
-    this.el.style.margin = halo ? `${-this.cssPx}px` : "0";
+    const w = cols * d;
+    const hgt = lines * d;
+    if (this.el.width !== w) this.el.width = w;
+    if (this.el.height !== hgt) this.el.height = hgt;
+    const p = this.cssPx;
+    this.el.style.width = `${w / this.dpr}px`;
+    this.el.style.height = `${hgt / this.dpr}px`;
+    this.el.style.margin = `${-oy * p}px ${-(cols - SPRITE_SIZE - ox) * p}px ${-(lines - SPRITE_SIZE - oy) * p}px ${-ox * p}px`;
 
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, size, size);
+    ctx.clearRect(0, 0, w, hgt);
     grid.forEach((line, y) => {
       for (let x = 0; x < line.length; x++) {
         const color = pixelColor(line[x] ?? ".", palette, HALO);

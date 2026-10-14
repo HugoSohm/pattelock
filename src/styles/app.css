@@ -244,13 +244,45 @@ canvas {
 .cat .sprite {
   pointer-events: none;
 }
+/* Les « z » partent du dessus de l'oreille droite (haut du sprite). */
 .zz {
   position: absolute;
-  left: calc(50% + 6.6 * var(--px, 5px));
-  top: calc(-24 * var(--px, 5px) - 0.25rem);
+  left: calc(50% + 5 * var(--px, 5px));
+  top: calc(-18 * var(--px, 5px) - 0.25rem);
+  width: 0;
+  height: 0;
   font-family: "Silkscreen", monospace;
+  color: var(--accent);
+  pointer-events: none;
+}
+.zz .z,
+.zz .z-static {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.zz .z0 {
+  font-size: 0.75rem;
+}
+.zz .z1 {
+  font-size: 0.875rem;
+}
+.zz .z2 {
+  font-size: 1rem;
+}
+.zz .z-static {
+  left: calc(1.6 * var(--px, 5px));
+  bottom: calc(2 * var(--px, 5px));
   font-size: 1rem;
   letter-spacing: 0.1875rem;
+}
+.bang {
+  position: absolute;
+  font-family: "Silkscreen", monospace;
+  font-size: 0.75rem;
+  line-height: 1;
   color: var(--accent);
   pointer-events: none;
 }
