@@ -1,0 +1,25 @@
+/* Polices embarquées (SIL Open Font License 1.1, voir src/assets/fonts/OFL.txt). */
+@font-face {
+  font-family: "Pixelify Sans";
+  font-weight: 400;
+  font-display: block;
+  src: url("../assets/fonts/PixelifySans-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Pixelify Sans";
+  font-weight: 600;
+  font-display: block;
+  src: url("../assets/fonts/PixelifySans-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Pixelify Sans";
+  font-weight: 700;
+  font-display: block;
+  src: url("../assets/fonts/PixelifySans-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Silkscreen";
+  font-weight: 400;
+  font-display: block;
+  src: url("../assets/fonts/Silkscreen-400.woff2") format("woff2");
+}

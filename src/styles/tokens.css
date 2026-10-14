@@ -1,0 +1,46 @@
+/*
+ * Couleurs de l'interface : mêmes rôles, valeurs claires ou sombres. Le thème est porté
+ * par <html data-theme="light|dark">. Les variables composées (contours crantés) sont
+ * redéclarées au même niveau que le thème pour suivre ses couleurs.
+ */
+:root,
+:root[data-theme="light"] {
+  --bg: #fbfaf7;
+  --ink: #1f1b24;
+  --muted: #6a6472;
+  --line: #ebe6dd;
+  --strip: #f1ede6;
+  --key-edge: #d9d3c9;
+  --kbd: #efebe4;
+  --ring: #e6e1d8;
+  --led-off: #b9b3bf;
+  --ink-edge: #000000;
+  --strip-shade: rgba(31, 27, 36, 0.08);
+  --accent: #ff9548;
+  --notch4:
+    -0.25rem 0 0 0 var(--ink), 0.25rem 0 0 0 var(--ink), 0 -0.25rem 0 0 var(--ink), 0 0.25rem 0 0 var(--ink);
+  --notch3:
+    -0.1875rem 0 0 0 var(--ink), 0.1875rem 0 0 0 var(--ink), 0 -0.1875rem 0 0 var(--ink),
+    0 0.1875rem 0 0 var(--ink);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #1c1a21;
+  --ink: #ece7df;
+  --muted: #aaa3b4;
+  --line: #2f2b36;
+  --strip: #26232c;
+  --key-edge: #3d3846;
+  --kbd: #2f2b36;
+  --ring: #34303b;
+  --led-off: #5a5463;
+  --ink-edge: #b4ada2;
+  --strip-shade: rgba(0, 0, 0, 0.25);
+  --notch4:
+    -0.25rem 0 0 0 var(--ink), 0.25rem 0 0 0 var(--ink), 0 -0.25rem 0 0 var(--ink), 0 0.25rem 0 0 var(--ink);
+  --notch3:
+    -0.1875rem 0 0 0 var(--ink), 0.1875rem 0 0 0 var(--ink), 0 -0.1875rem 0 0 var(--ink),
+    0 0.1875rem 0 0 var(--ink);
+  color-scheme: dark;
+}

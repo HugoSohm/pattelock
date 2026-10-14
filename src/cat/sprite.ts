@@ -83,10 +83,7 @@ export function withHalo(rows: Frame): string[] {
         continue;
       }
       const touches =
-        at(x + 1, y) !== "." ||
-        at(x - 1, y) !== "." ||
-        at(x, y + 1) !== "." ||
-        at(x, y - 1) !== ".";
+        at(x + 1, y) !== "." || at(x - 1, y) !== "." || at(x, y + 1) !== "." || at(x, y - 1) !== ".";
       line += touches ? "R" : ".";
     }
     out.push(line);

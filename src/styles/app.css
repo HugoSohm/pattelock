@@ -1,0 +1,611 @@
+/*
+ * Valeurs reprises de docs/maquette/pattelock-maquette.html, converties en rem.
+ * 1 rem = 16 px quand la fenêtre fait 760 px de large.
+ */
+* {
+  box-sizing: border-box;
+}
+html {
+  font-size: calc(100vw / 47.5);
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Pixelify Sans", monospace;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+button {
+  font-family: inherit;
+  border: 0;
+  margin: 0;
+  color: inherit;
+  cursor: pointer;
+}
+button:disabled,
+button[aria-disabled="true"] {
+  cursor: default;
+}
+button:focus-visible {
+  outline: 0.1875rem solid var(--accent);
+  outline-offset: 0.1875rem;
+}
+svg {
+  shape-rendering: crispEdges;
+}
+canvas {
+  image-rendering: pixelated;
+}
+[hidden] {
+  /* biome-ignore lint/complexity/noImportantStyles: [hidden] doit l’emporter sur les display des composants */
+  display: none !important;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes pl-blink {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  61%,
+  100% {
+    opacity: 0.15;
+  }
+}
+
+/* ---------- Fenêtre ---------- */
+.win {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.titlebar {
+  height: 2.5rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.5rem 0 1rem;
+  border-bottom: 0.1875rem solid var(--line);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.03125rem;
+  pointer-events: none;
+}
+.brand svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.back {
+  height: 2rem;
+  padding: 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.back svg {
+  width: 0.5rem;
+  height: 0.75rem;
+}
+.winbtns {
+  display: flex;
+  gap: 0.25rem;
+}
+.winbtns button {
+  width: 2rem;
+  height: 2rem;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.winbtns button:hover {
+  color: var(--ink);
+}
+.ico-dots {
+  width: 0.875rem;
+  height: 0.25rem;
+}
+.ico-min,
+.ico-close {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+/* ---------- Écran principal ---------- */
+.body {
+  flex: 1;
+  padding: 1.625rem 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3125rem 0.625rem;
+  font-family: "Silkscreen", monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.0625rem;
+}
+.badge .led {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+.on .badge {
+  background: var(--ink);
+  color: var(--bg);
+}
+.on .badge .led {
+  background: var(--accent);
+  animation: pl-blink 1.4s steps(1) infinite;
+}
+.off .badge {
+  background: var(--kbd);
+  color: var(--muted);
+}
+.off .badge .led {
+  background: var(--led-off);
+}
+.title {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.sub {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.hint {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.paw {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.hint .paw {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+/* ---------- Bande clavier et chat ---------- */
+.strip {
+  margin-top: 7.75rem;
+  position: relative;
+  padding: 1.25rem;
+  background: var(--strip);
+  display: flex;
+  gap: 1rem;
+  box-shadow:
+    var(--notch4),
+    inset 0 -0.375rem 0 0 var(--strip-shade);
+}
+/* --px : taille d'un pixel-sprite en px CSS, entière en pixels écran (calculée en JS). */
+.cat {
+  position: absolute;
+  left: calc(50% - 10 * var(--px, 5px));
+  top: calc(-20 * var(--px, 5px) - 0.25rem);
+  width: calc(20 * var(--px, 5px));
+  height: calc(20 * var(--px, 5px));
+  padding: 0;
+  background: transparent;
+  display: block;
+  line-height: 0;
+}
+.cat:focus-visible {
+  outline-offset: 0.375rem;
+}
+.sprite {
+  display: block;
+}
+.cat .sprite {
+  pointer-events: none;
+}
+.zz {
+  position: absolute;
+  left: calc(50% + 6.6 * var(--px, 5px));
+  top: calc(-24 * var(--px, 5px) - 0.25rem);
+  font-family: "Silkscreen", monospace;
+  font-size: 1rem;
+  letter-spacing: 0.1875rem;
+  color: var(--accent);
+  pointer-events: none;
+}
+.off .zz {
+  display: none;
+}
+.group {
+  display: flex;
+  gap: 0.25rem;
+}
+.key {
+  position: relative;
+  width: 2.125rem;
+  height: 2.5rem;
+  padding: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.key.wide {
+  width: 2.875rem;
+  font-size: 0.6875rem;
+}
+.key .kled {
+  position: absolute;
+  right: 0.25rem;
+  top: 0.25rem;
+  width: 0.25rem;
+  height: 0.25rem;
+  background: var(--accent);
+}
+.key.s-active {
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: inset 0 -0.25rem 0 0 var(--ink-edge);
+}
+.key.s-planned {
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 0.125rem var(--ink);
+}
+.key.s-free {
+  background: var(--bg);
+  color: var(--muted);
+  box-shadow:
+    inset 0 -0.25rem 0 0 var(--key-edge),
+    inset 0 0 0 0.0625rem var(--ring);
+}
+.key[aria-disabled="true"] {
+  cursor: default;
+}
+
+/* ---------- Légende et statistique ---------- */
+.legend {
+  margin-top: 1.125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.legend .it {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.legend .sw {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.sw.sw-active {
+  background: var(--ink);
+  box-shadow: inset -0.25rem 0.25rem 0 -0.125rem var(--accent);
+}
+.sw.sw-free {
+  background: var(--bg);
+  box-shadow: inset 0 0 0 0.125rem var(--key-edge);
+}
+.sw.sw-planned {
+  background: var(--bg);
+  box-shadow: inset 0 0 0 0.125rem var(--ink);
+}
+.sw.sw-all {
+  background: var(--accent);
+}
+.activity {
+  margin-top: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-align: center;
+}
+.activity .paw {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.activity b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------- Pied de page ---------- */
+.footer {
+  align-self: stretch;
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.lockall {
+  height: 2.375rem;
+  padding: 0 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow:
+    var(--notch3),
+    inset 0 -0.25rem 0 0 var(--key-edge);
+}
+.lockall svg {
+  width: 0.625rem;
+  height: 0.875rem;
+}
+.lockall[aria-pressed="true"] {
+  background: var(--accent);
+  color: #1f1b24;
+  box-shadow:
+    var(--notch3),
+    inset 0 -0.25rem 0 0 rgba(0, 0, 0, 0.22);
+}
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.shortcut .recording {
+  color: var(--ink);
+}
+.shortcut .error {
+  max-width: 16rem;
+  margin-right: 0.5rem;
+  color: var(--ink);
+  font-size: 0.75rem;
+  text-align: right;
+}
+kbd {
+  font-family: inherit;
+  font-size: 0.8125rem;
+  padding: 0.1875rem 0.4375rem 0.3125rem;
+  background: var(--kbd);
+  color: var(--ink);
+  box-shadow: inset 0 -0.1875rem 0 0 var(--key-edge);
+}
+.change {
+  height: 2rem;
+  margin-left: 0.625rem;
+  padding: 0 0.75rem;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  box-shadow: inset 0 -0.25rem 0 0 var(--ink-edge);
+}
+.change:disabled {
+  opacity: 0.45;
+}
+
+/* ---------- Réglages ---------- */
+.settings {
+  flex: 1;
+  padding: 1.625rem 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.625rem;
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.lbl {
+  margin: 0;
+  font-family: "Silkscreen", monospace;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.0625rem;
+  color: var(--muted);
+}
+.furs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+.fur {
+  height: 8rem;
+  padding: 0.75rem 0 0.625rem;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: inset 0 0 0 0.125rem var(--line);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.fur[aria-checked="true"] {
+  background: var(--strip);
+  color: var(--ink);
+  box-shadow:
+    var(--notch4),
+    inset 0 -0.375rem 0 0 var(--accent);
+}
+.accs {
+  display: flex;
+  gap: 0.75rem;
+}
+.acc {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.375rem;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 0.125rem var(--line);
+}
+.acc span {
+  display: block;
+  width: 2rem;
+  height: 2rem;
+}
+.acc[aria-checked="true"] {
+  box-shadow: var(--notch3);
+}
+.themes {
+  align-self: flex-start;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--bg);
+  box-shadow: var(--notch3);
+}
+.th {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.th[aria-checked="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+.th i {
+  width: 0.625rem;
+  height: 0.625rem;
+  box-shadow: inset 0 0 0 0.125rem currentColor;
+}
+.th-system i {
+  background: linear-gradient(90deg, #fbfaf7 50%, #1c1a21 50%);
+}
+.th-light i {
+  background: #fbfaf7;
+}
+.th-dark i {
+  background: #1c1a21;
+}
+.opts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.opt {
+  height: 2.75rem;
+  padding: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ink);
+  font-size: 0.875rem;
+  text-align: left;
+  border-bottom: 0.1875rem solid var(--line);
+}
+.sw2 {
+  width: 3rem;
+  height: 1.5rem;
+  padding: 0.25rem;
+  background: var(--key-edge);
+  display: flex;
+  justify-content: flex-start;
+  box-shadow: var(--notch3);
+}
+.sw2 span {
+  width: 1rem;
+  height: 1rem;
+  background: var(--bg);
+}
+.opt[aria-checked="true"] .sw2 {
+  background: var(--accent);
+  justify-content: flex-end;
+}
+
+/* ---------- Écran d'avertissement (permissions) ---------- */
+.notice {
+  flex: 1;
+  padding: 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+}
+.notice p {
+  margin: 0;
+  max-width: 34rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.notice code {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  background: var(--kbd);
+  color: var(--ink);
+  font-size: 0.75rem;
+  user-select: text;
+  -webkit-user-select: text;
+  text-align: left;
+  white-space: pre-wrap;
+}
+.btn-ink {
+  height: 2.25rem;
+  padding: 0 1rem;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: inset 0 -0.25rem 0 0 var(--ink-edge);
+}
+.banner {
+  margin-top: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  background: var(--kbd);
+  color: var(--ink);
+  font-size: 0.75rem;
+  text-align: center;
+}
