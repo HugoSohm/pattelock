@@ -16,8 +16,8 @@
 **Pattelock** is a small desktop app for **cat owners who work at a computer**. When your cat lies down on the keyboard, F1 to F12, Print Screen, Scroll Lock and Pause stop doing anything: no help page, no reload, no full screen, no screenshot. Need more? Lock the whole keyboard in one click. Your mouse keeps working.
 
 <div align="center">
-  <img src="docs/maquette/pattelock-actif.png" width="380" />
-  <img src="docs/maquette/pattelock-sombre-pause.png" width="380" />
+  <img src="docs/screenshots/active-light.png" width="380" alt="Pattelock with protection on, light theme" />
+  <img src="docs/screenshots/paused-dark.png" width="380" alt="Pattelock paused, dark theme" />
 </div>
 
 ### ✨ Features
@@ -32,6 +32,13 @@
 - 🗂️ **Lives in the tray**: closing the window keeps Pattelock running in the taskbar or menu bar, and it can start with your session.
 - 🔄 **Automatic updates**: Pattelock checks GitHub for a new version and installs it in one click. You can turn the check off in the settings.
 - 🔒 **Private by design**: no telemetry. The only network call is the optional update check. Settings and the counter stay on your machine.
+
+### 📸 Screenshots
+
+<div align="center">
+  <img src="docs/screenshots/whole-keyboard-light.png" width="380" alt="Whole keyboard locked" />
+  <img src="docs/screenshots/settings-light.png" width="380" alt="Settings: cat coat, accent color, theme, language" />
+</div>
 
 ---
 
