@@ -335,14 +335,11 @@ canvas {
 }
 
 /* ---------- Légende et statistique ---------- */
-.legend-row {
-  margin-top: 1.125rem;
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-/* Bouton texte discret (« Tout sélectionner »), souligné en pointillés pixel. */
+/* « Tout sélectionner » : bouton texte discret, au-dessus du bord droit de la bande. */
 .linkbtn {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.75rem);
   padding: 0 0 0.125rem;
   background: transparent;
   color: var(--ink);
@@ -354,6 +351,7 @@ canvas {
   box-shadow: inset 0 -0.125rem 0 0 var(--accent);
 }
 .legend {
+  margin-top: 1.125rem;
   display: flex;
   align-items: center;
   gap: 0.875rem;

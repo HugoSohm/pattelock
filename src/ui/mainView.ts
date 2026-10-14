@@ -51,11 +51,12 @@ export function createMainView(handlers: MainHandlers): MainView {
   let builtFor: { platform: Platform; lang: Lang } | null = null;
 
   const legend = h("div", { class: "legend" });
-  // « Tout sélectionner » / « Tout désélectionner », sur la ligne de la légende.
+  // « Tout sélectionner » / « Tout désélectionner » : action de la bande, posée au-dessus
+  // de son bord droit (la légende reste purement informative).
   const allKeys = h("button", { class: "linkbtn", attrs: { type: "button" } });
   let allBlocked = false;
   allKeys.addEventListener("click", () => handlers.onAllKeys(!allBlocked));
-  const legendRow = h("div", { class: "legend-row" }, legend, allKeys);
+  strip.append(allKeys);
   const count = h("b");
   const countText = h("span");
   const activity = h("div", { class: "activity" }, paw(), h("span", {}, count, " ", countText));
@@ -78,7 +79,7 @@ export function createMainView(handlers: MainHandlers): MainView {
     h("div", { class: "status" }, h("div", { class: "badge" }, led, tag), title, sub),
     h("div", { class: "hint" }, paw(), hint),
     strip,
-    legendRow,
+    legend,
     activity,
     banner,
     h("div", { class: "footer" }, lockall, shortcut),
