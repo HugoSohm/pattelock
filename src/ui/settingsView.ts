@@ -95,15 +95,14 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
   });
   rovingRadios(themes);
 
-  // Langue : une ligne de la liste d'options, avec un petit sélecteur segmenté.
-  const langLabel = h("span", { attrs: { id: "lbl-lang" } });
+  // Langue : même sélecteur segmenté que le thème, sans icône.
   const langs = h("div", {
-    class: "langs",
+    class: "themes",
     attrs: { role: "radiogroup", "aria-labelledby": "lbl-lang" },
   });
   const langBtns = LANGUAGES.map((l) => {
     const b = h("button", {
-      class: "lg",
+      class: "th",
       attrs: { type: "button", role: "radio", "aria-checked": "false" },
     });
     if (l.name) {
@@ -115,7 +114,6 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
     return { ...l, b };
   });
   rovingRadios(langs);
-  const langRow = h("div", { class: "opt opt-row" }, langLabel, langs);
 
   // Interrupteurs
   const option = (key: "autostart" | "mediaKeys") => {
@@ -139,8 +137,14 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
     { class: "settings" },
     section("settings.coat", "lbl-fur", furs),
     section("settings.accent", "lbl-accent", accs),
-    section("settings.theme", "lbl-theme", themes),
-    h("div", { class: "opts" }, langRow, autostart.b, media.b),
+    // Thème et langue côte à côte : même format, sans coûter de hauteur.
+    h(
+      "div",
+      { class: "section-row" },
+      section("settings.theme", "lbl-theme", themes),
+      section("settings.language", "lbl-lang", langs),
+    ),
+    h("div", { class: "opts" }, autostart.b, media.b),
   );
 
   function update(s: AppState, dark: boolean): void {
@@ -163,7 +167,6 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
       l.b.setAttribute("aria-checked", String(s.settings.language === l.id));
       if (!l.name) setText(l.b, t("lang.system"));
     }
-    setText(langLabel, t("settings.language"));
     syncRadios(furs);
     syncRadios(accs);
     syncRadios(themes);
