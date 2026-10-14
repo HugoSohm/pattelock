@@ -260,7 +260,9 @@ impl Core {
     }
 
     pub fn emit_state(&self) {
-        if let Err(e) = self.app.emit(EV_STATE, self.snapshot()) {
+        let state = self.snapshot();
+        crate::tray::refresh(&self.app, state.mode);
+        if let Err(e) = self.app.emit(EV_STATE, state) {
             log::warn!("événement {EV_STATE} non envoyé : {e}");
         }
     }

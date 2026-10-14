@@ -7,12 +7,13 @@ mod keyguard;
 mod settings;
 mod shortcut;
 mod state;
+mod tray;
 mod window;
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use tauri::{Manager, RunEvent};
+use tauri::{Manager, RunEvent, WindowEvent};
 
 use crate::core::Core;
 use crate::cursor::CursorFollow;
@@ -23,6 +24,10 @@ const SHOW_FALLBACK: Duration = Duration::from_secs(3);
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
+        // En premier : relancer l'app ramène la fenêtre existante au premier plan.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            window::show_main(app);
+        }))
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -36,10 +41,12 @@ pub fn run() {
             let handle = app.handle().clone();
             let core = Core::start(&handle)?;
             let theme = core.prefs().theme;
+            let mode = core.mode();
             app.manage(core);
             app.state::<CursorFollow>().start(handle.clone());
 
             window::create_main(&handle, theme)?;
+            tray::create(&handle, mode)?;
             // Filet de sécurité : la fenêtre s'affiche même si le front ne répond pas.
             std::thread::spawn(move || {
                 std::thread::sleep(SHOW_FALLBACK);
@@ -48,7 +55,24 @@ pub fn run() {
             });
             Ok(())
         })
-        .on_window_event(window::on_window_event)
+        .on_window_event(|win, event| {
+            window::on_window_event(win, event);
+            match event {
+                // Fermer la fenêtre la cache : Pattelock reste dans le tray et le blocage
+                // continue.
+                WindowEvent::CloseRequested { api, .. } => {
+                    api.prevent_close();
+                    window::hide_main(win.app_handle());
+                }
+                // L'icône du tray suit le thème du système.
+                WindowEvent::ThemeChanged(_) => {
+                    if let Some(core) = win.try_state::<Arc<Core>>() {
+                        tray::refresh(win.app_handle(), core.mode());
+                    }
+                }
+                _ => {}
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
             commands::cat_clicked,
