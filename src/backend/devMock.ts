@@ -86,6 +86,7 @@ export function createMockBackend(): Backend {
       emit();
     },
     openAccessibilitySettings: async () => {},
+    reportLocalKey: () => {},
     setCatAnchor: () => {},
     minimize: async () => {},
     hide: async () => {},

@@ -57,6 +57,7 @@ pub fn run() {
             commands::begin_shortcut_capture,
             commands::end_shortcut_capture,
             commands::open_accessibility_settings,
+            commands::report_local_key,
             commands::set_cat_anchor,
             commands::ui_ready,
             commands::hide_window,

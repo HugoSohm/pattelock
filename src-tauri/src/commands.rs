@@ -55,6 +55,12 @@ pub fn open_accessibility_settings(core: CoreState<'_>) {
     core.retry_guard();
 }
 
+/// Touche avalée par la page quand la fenêtre de l'app a le focus.
+#[tauri::command]
+pub fn report_local_key(core: CoreState<'_>, key: String) {
+    core.local_intercept(&key);
+}
+
 #[tauri::command]
 pub fn set_cat_anchor(follow: State<'_, CursorFollow>, x: f64, y: f64, tracking: bool) {
     follow.set_anchor(x, y, tracking);

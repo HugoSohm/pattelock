@@ -196,6 +196,8 @@ pub fn create_main(app: &AppHandle, theme: ThemePref) -> tauri::Result<WebviewWi
         builder = builder.background_color(background(window_theme(theme).unwrap_or(Theme::Light)));
     }
     let window = builder.build()?;
+    #[cfg(windows)]
+    disable_browser_accelerators(&window);
     if theme == ThemePref::System {
         let resolved = window.theme().unwrap_or(Theme::Light);
         let _ = window.set_background_color(Some(background(resolved)));
@@ -204,6 +206,32 @@ pub fn create_main(app: &AppHandle, theme: ThemePref) -> tauri::Result<WebviewWi
         log::error!("calcul de la taille de fenêtre impossible : {e}");
     }
     Ok(window)
+}
+
+/// Coupe les raccourcis du navigateur de WebView2 (F5 recharge, F7 navigation au curseur,
+/// Ctrl+P imprime...) : ils sont traités avant la page, qui ne pourrait pas les annuler
+/// quand la fenêtre de Pattelock elle-même a le focus. La page reçoit toujours les touches.
+#[cfg(windows)]
+fn disable_browser_accelerators(window: &WebviewWindow) {
+    let result = window.with_webview(|webview| {
+        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings3;
+        use windows::core::Interface;
+        // SAFETY : appels COM sur le contrôleur WebView2, depuis le thread principal.
+        let result = unsafe {
+            webview
+                .controller()
+                .CoreWebView2()
+                .and_then(|core| core.Settings())
+                .and_then(|settings| settings.cast::<ICoreWebView2Settings3>())
+                .and_then(|settings| settings.SetAreBrowserAcceleratorKeysEnabled(false))
+        };
+        if let Err(e) = result {
+            log::warn!("raccourcis du navigateur toujours actifs : {e}");
+        }
+    });
+    if let Err(e) = result {
+        log::warn!("accès à la webview impossible : {e}");
+    }
 }
 
 /// Applique le thème choisi à la fenêtre (le front suit via `prefers-color-scheme`).

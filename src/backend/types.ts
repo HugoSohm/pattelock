@@ -28,6 +28,8 @@ export interface Backend {
 
   updateSettings(patch: Partial<Settings>): Promise<void>;
   openAccessibilitySettings(): Promise<void>;
+  /** Touche avalée dans la fenêtre de l'app elle-même (compteur). */
+  reportLocalKey(key: string): void;
   /** Indique où se trouve le chat dans la fenêtre (pour le suivi du curseur global). */
   setCatAnchor(anchor: { x: number; y: number; tracking: boolean }): void;
 

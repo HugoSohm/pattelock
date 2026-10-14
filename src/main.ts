@@ -10,6 +10,7 @@ import { skinById } from "./cat/skins.ts";
 import { applyAccent, ThemeController } from "./theme.ts";
 import type { AppState, KeyId } from "./types.ts";
 import { h } from "./ui/dom.ts";
+import { installLocalGuard } from "./ui/localGuard.ts";
 import { createMainView, type UiState } from "./ui/mainView.ts";
 import { createNoticeView } from "./ui/noticeView.ts";
 import { createSettingsView } from "./ui/settingsView.ts";
@@ -46,6 +47,12 @@ async function start(backend: Backend): Promise<void> {
       render();
     },
   });
+
+  installLocalGuard(
+    () => state,
+    () => recorder.active,
+    (key) => backend.reportLocalKey(key),
+  );
 
   const titlebar = createTitlebar({
     onSettings: () => setView("settings"),

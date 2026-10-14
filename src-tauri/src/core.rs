@@ -231,6 +231,14 @@ impl Core {
         }
     }
 
+    /// Touche avalée dans la fenêtre de l'app (voir `localGuard.ts`) : même traitement
+    /// qu'une interception du hook, si le blocage est bien actif.
+    pub fn local_intercept(&self, key: &str) {
+        if self.mode() != Mode::Off {
+            self.shared.intercepted(BlockableKey::from_id(key));
+        }
+    }
+
     /// Relance la détection des permissions (macOS, Linux).
     pub fn retry_guard(&self) {
         self.guard.retry();
