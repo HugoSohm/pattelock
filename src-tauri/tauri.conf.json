@@ -65,7 +65,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU1NjdFM0JFMDE1OTdCQjgKUldTNGUxa0J2dU5uVlVVTkN5ZFFVcXpjUmhYVVVjT1ROd3BwK3hZdmdzWVU0Tk5uaS9GQi8vT1EK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMyNzM4RTQ5Nzc5NkY5NjcKUldSbitaWjNTWTV6d2c3bnlNWVV4akR4ckJ6angxYnZNNnhsTkVBc3lOb1k1Z3hkVHhRSUN2U1UK",
       "endpoints": [
         "https://github.com/HugoSohm/pattelock/releases/latest/download/latest.json"
       ],
