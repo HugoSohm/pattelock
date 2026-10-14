@@ -272,6 +272,7 @@ fn spawn_event_pump(app: AppHandle, core: Arc<Core>, rx: Receiver<GuardEvent>) {
         .spawn(move || {
             let mut throttle = Throttle::new(Duration::from_millis(100));
             let mut emitted_total = core.counter.total();
+            let mut last_status = core.guard.status();
             loop {
                 match rx.recv_timeout(Duration::from_millis(250)) {
                     Ok(GuardEvent::Intercepted { key }) => {
@@ -301,6 +302,13 @@ fn spawn_event_pump(app: AppHandle, core: Arc<Core>, rx: Receiver<GuardEvent>) {
                     emitted_total = total;
                 }
                 core.flush_counter(false);
+                // Permission accordée, hook démarré... : l'UI suit l'état du blocage.
+                let status = core.guard.status();
+                if status != last_status {
+                    log::info!("blocage : {status:?}");
+                    last_status = status;
+                    core.emit_state();
+                }
             }
         });
     if let Err(e) = spawned {

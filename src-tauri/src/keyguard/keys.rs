@@ -289,6 +289,36 @@ pub fn macos_shortcut_keycode(code: &str) -> Option<u16> {
     })
 }
 
+/// Touches média de la rangée du haut d'un clavier Mac : événements système (type 14,
+/// sous-type 8) dont `data1 >> 16` vaut un `NX_KEYTYPE_*`. On les rattache à la touche F
+/// qui les porte, pour ne les bloquer que si cette touche est bloquée.
+pub fn macos_media_key(nx_keytype: i64) -> Option<BlockableKey> {
+    Some(match nx_keytype {
+        3 => BlockableKey::F1,       // NX_KEYTYPE_BRIGHTNESS_DOWN
+        2 => BlockableKey::F2,       // NX_KEYTYPE_BRIGHTNESS_UP
+        22 => BlockableKey::F5,      // NX_KEYTYPE_ILLUMINATION_DOWN
+        21 => BlockableKey::F6,      // NX_KEYTYPE_ILLUMINATION_UP
+        18 | 20 => BlockableKey::F7, // NX_KEYTYPE_PREVIOUS / REWIND
+        16 => BlockableKey::F8,      // NX_KEYTYPE_PLAY
+        17 | 19 => BlockableKey::F9, // NX_KEYTYPE_NEXT / FAST
+        7 => BlockableKey::F10,      // NX_KEYTYPE_MUTE
+        1 => BlockableKey::F11,      // NX_KEYTYPE_SOUND_DOWN
+        0 => BlockableKey::F12,      // NX_KEYTYPE_SOUND_UP
+        _ => return None,
+    })
+}
+
+/// Autres fonctions de la rangée du haut, envoyées comme des touches ordinaires avec un
+/// keycode spécial (Mission Control, Launchpad, Spotlight, Dictée).
+pub fn macos_function_row_keycode(code: u16) -> Option<BlockableKey> {
+    Some(match code {
+        0xA0 => BlockableKey::F3,        // Mission Control
+        0x83 | 0xB1 => BlockableKey::F4, // Launchpad, Spotlight
+        0xB0 => BlockableKey::F5,        // Dictée
+        _ => return None,
+    })
+}
+
 // ---------------------------------------------------------------- Linux
 
 /// Code evdev (`KEY_F1`...) d'une touche bloquable. Sous X11, keycode = evdev + 8.
@@ -453,6 +483,20 @@ mod tests {
         }
         assert_eq!(macos_shortcut_keycode("KeyK"), Some(0x28)); // kVK_ANSI_K
         assert_eq!(macos_shortcut_keycode("F13"), None);
+    }
+
+    #[test]
+    fn macos_media_keys_follow_the_top_row() {
+        assert_eq!(macos_media_key(3), Some(BlockableKey::F1));
+        assert_eq!(macos_media_key(16), Some(BlockableKey::F8));
+        assert_eq!(macos_media_key(0), Some(BlockableKey::F12));
+        assert_eq!(macos_media_key(99), None);
+        assert_eq!(macos_function_row_keycode(0xA0), Some(BlockableKey::F3));
+        assert_eq!(macos_function_row_keycode(0x28), None);
+        // Aucun keycode spécial ne recouvre une vraie touche F.
+        for k in BlockableKey::ALL {
+            assert_eq!(macos_function_row_keycode(macos_keycode(k)), None);
+        }
     }
 
     #[test]
