@@ -26,6 +26,7 @@ export function createTauriBackend(): Backend {
     setShortcut: (shortcut) => invoke("set_shortcut", { shortcut }),
     updateSettings: (patch) => invoke("update_settings", { patch }),
     openAccessibilitySettings: () => invoke("open_accessibility_settings"),
+    installUpdate: () => invoke("install_update"),
     reportLocalKey: (key) => void invoke("report_local_key", { key }),
     setUiLanguage: (lang) => void invoke("set_ui_language", { lang }),
     setCatAnchor: (a) => void invoke("set_cat_anchor", a),

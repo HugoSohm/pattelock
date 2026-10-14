@@ -89,6 +89,12 @@ pub fn ui_ready(app: AppHandle) {
     crate::window::show_main_once(&app);
 }
 
+/// Télécharge et installe la mise à jour proposée, puis relance l'app.
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> Result<(), String> {
+    crate::updater::install(app).await
+}
+
 #[tauri::command]
 pub fn hide_window(app: AppHandle) {
     crate::window::hide_main(&app);

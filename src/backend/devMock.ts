@@ -3,7 +3,8 @@
  * sans Tauri. Uniquement chargé en développement : dans l'app, l'état vient du Rust.
  *
  * Paramètres d'URL : ?etat=pause|tout, ?theme=light|dark|system, ?pelage=roux,
- * ?plateforme=macos|linux, ?langue=fr|en, ?garde=accessibilite|input|indisponible|partiel.
+ * ?plateforme=macos|linux, ?langue=fr|en, ?garde=accessibilite|input|indisponible|partiel,
+ * ?maj=dispo|echec (mise à jour proposée).
  */
 
 import { isSkinId } from "../cat/skins.ts";
@@ -26,6 +27,7 @@ export function createMockBackend(): Backend {
   const theme = (params.get("theme") as ThemePref | null) ?? "system";
   const garde = params.get("garde");
   const langue = params.get("langue");
+  const maj = params.get("maj");
   const guard: GuardStatus =
     garde === "accessibilite"
       ? { kind: "needsAccessibility" }
@@ -52,10 +54,12 @@ export function createMockBackend(): Backend {
       autostart: true,
       mediaKeys: true,
       language: langue === "fr" || langue === "en" ? langue : "system",
+      checkUpdates: true,
     },
     total: 1284,
     platform,
     guard,
+    update: maj ? { version: "0.2.0", status: maj === "echec" ? "failed" : "available" } : null,
   };
 
   let onState: (s: AppState) => void = () => {};
@@ -102,6 +106,16 @@ export function createMockBackend(): Backend {
       emit();
     },
     openAccessibilitySettings: async () => {},
+    installUpdate: async () => {
+      if (!state.update) return;
+      for (const progress of [0, 35, 70, 100]) {
+        state.update = { ...state.update, status: "downloading", progress };
+        emit();
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      state.update = { version: state.update.version, status: "installing" };
+      emit();
+    },
     reportLocalKey: () => {},
     setUiLanguage: () => {},
     setCatAnchor: () => {},

@@ -75,6 +75,15 @@ const fr = {
   "lang.system": "Système",
   "opt.autostart": "Lancer Pattelock au démarrage",
   "opt.media": "Bloquer aussi les fonctions média de la rangée du haut (Mac)",
+  "opt.updates": "Rechercher les mises à jour automatiquement",
+  // Mises à jour
+  "update.available": "Pattelock {version} est disponible.",
+  "update.install": "Mettre à jour",
+  "update.downloading": "Téléchargement de la mise à jour… {p} %",
+  "update.downloadingNoSize": "Téléchargement de la mise à jour…",
+  "update.installing": "Installation de la mise à jour…",
+  "update.failed": "La mise à jour a échoué.",
+  "update.retry": "Réessayer",
   // Permissions et état du blocage
   "notice.ax.title": "Pattelock a besoin de l’Accessibilité",
   "notice.ax.text":
@@ -189,6 +198,14 @@ const en: Record<TextKey, string> = {
   "lang.system": "System",
   "opt.autostart": "Launch Pattelock at startup",
   "opt.media": "Also block the media functions of the top row (Mac)",
+  "opt.updates": "Check for updates automatically",
+  "update.available": "Pattelock {version} is available.",
+  "update.install": "Update",
+  "update.downloading": "Downloading the update… {p}%",
+  "update.downloadingNoSize": "Downloading the update…",
+  "update.installing": "Installing the update…",
+  "update.failed": "The update failed.",
+  "update.retry": "Try again",
   "notice.ax.title": "Pattelock needs Accessibility",
   "notice.ax.text":
     "To block keys, macOS must allow Pattelock in System Settings, Privacy & Security, Accessibility. Check Pattelock in the list, then come back here.",

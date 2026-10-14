@@ -31,6 +31,8 @@ export interface Backend {
 
   updateSettings(patch: Partial<Settings>): Promise<void>;
   openAccessibilitySettings(): Promise<void>;
+  /** Télécharge et installe la mise à jour proposée, puis relance l'app. */
+  installUpdate(): Promise<void>;
   /** Langue réellement affichée, pour traduire le menu du tray. */
   setUiLanguage(lang: Lang): void;
   /** Touche avalée dans la fenêtre de l'app elle-même (compteur). */

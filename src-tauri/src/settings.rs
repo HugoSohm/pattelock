@@ -68,6 +68,8 @@ pub struct Prefs {
     /// macOS : bloquer aussi les fonctions média de la rangée du haut.
     pub media_keys: bool,
     pub language: LanguagePref,
+    /// Rechercher les mises à jour (seul accès réseau de l'app).
+    pub check_updates: bool,
 }
 
 impl Default for Prefs {
@@ -82,6 +84,7 @@ impl Default for Prefs {
             autostart: false,
             media_keys: true,
             language: LanguagePref::System,
+            check_updates: true,
         }
     }
 }
@@ -133,6 +136,7 @@ pub struct SettingsPatch {
     pub autostart: Option<bool>,
     pub media_keys: Option<bool>,
     pub language: Option<LanguagePref>,
+    pub check_updates: Option<bool>,
 }
 
 impl SettingsPatch {
@@ -156,6 +160,9 @@ impl SettingsPatch {
         if let Some(l) = self.language {
             p.language = l;
         }
+        if let Some(c) = self.check_updates {
+            p.check_updates = c;
+        }
     }
 }
 
@@ -178,6 +185,7 @@ mod tests {
         assert_eq!(p.accent, "#ff9548");
         assert_eq!(p.theme, ThemePref::System);
         assert!(p.media_keys);
+        assert!(p.check_updates);
     }
 
     #[test]

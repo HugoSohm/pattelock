@@ -62,5 +62,16 @@
       "signingIdentity": "-",
       "minimumSystemVersion": "10.15"
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU1NjdFM0JFMDE1OTdCQjgKUldTNGUxa0J2dU5uVlVVTkN5ZFFVcXpjUmhYVVVjT1ROd3BwK3hZdmdzWVU0Tk5uaS9GQi8vT1EK",
+      "endpoints": [
+        "https://github.com/HugoSohm/pattelock/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

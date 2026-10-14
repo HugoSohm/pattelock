@@ -125,8 +125,13 @@ jobs:
 
       - name: build and bundle
         uses: tauri-apps/tauri-action@v0
+        env:
+          # Signature des mises à jour (clé générée par « tauri signer generate »).
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          args: ${{ matrix.args }}
+          # tauri.release.conf.json active les artefacts signés de l'updater.
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
 
       - name: Package macOS DMG
         if: matrix.real_platform == 'macos-latest'
@@ -135,16 +140,30 @@ jobs:
           chmod +x scripts/macos/build.sh
           ARCH_OVERRIDE="${{ matrix.arch }}" ./scripts/macos/build.sh
 
+          # Archive de mise à jour (.app.tar.gz) : même nom pour les deux architectures,
+          # on la renomme avant de la publier.
+          VERSION="${{ needs.check-version.outputs.version }}"
+          if [ "${{ matrix.arch }}" = "aarch64" ]; then TARGET=aarch64-apple-darwin; else TARGET=x86_64-apple-darwin; fi
+          BUNDLE="src-tauri/target/$TARGET/release/bundle/macos"
+          cp "$BUNDLE/Pattelock.app.tar.gz" "dist/Pattelock_${VERSION}_${{ matrix.arch }}.app.tar.gz"
+          cp "$BUNDLE/Pattelock.app.tar.gz.sig" "dist/Pattelock_${VERSION}_${{ matrix.arch }}.app.tar.gz.sig"
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
           name: artifacts-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             src-tauri/target/**/bundle/**/*.exe
+            src-tauri/target/**/bundle/**/*.exe.sig
             src-tauri/target/**/bundle/**/*.AppImage
+            src-tauri/target/**/bundle/**/*.AppImage.sig
             src-tauri/target/**/bundle/**/*.deb
+            src-tauri/target/**/bundle/**/*.deb.sig
             src-tauri/target/**/bundle/**/*.rpm
+            src-tauri/target/**/bundle/**/*.rpm.sig
             dist/*.dmg
+            dist/*.app.tar.gz
+            dist/*.app.tar.gz.sig
 
   publish:
     name: "Publish Release"
@@ -178,7 +197,49 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
-          find ./all-artifacts -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) -exec gh release upload $VERSION {} --clobber \;
+          find ./all-artifacts -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.app.tar.gz" -o -name "*.sig" \) -exec gh release upload $VERSION {} --clobber \;
+
+      - name: Generate and upload latest.json
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/$VERSION"
+          A=./all-artifacts
+
+          # Plateforme de l'updater -> fichier publié (son .sig doit exister à côté).
+          # Sur macOS, l'updater installe l'archive .app.tar.gz, pas le DMG.
+          declare -A FILES=(
+            [windows-x86_64]="$(find $A -name '*_x64-setup.exe' | head -n 1)"
+            [windows-aarch64]="$(find $A -name '*_arm64-setup.exe' | head -n 1)"
+            [darwin-x86_64]="$(find $A -name '*_x64.app.tar.gz' | head -n 1)"
+            [darwin-aarch64]="$(find $A -name '*_aarch64.app.tar.gz' | head -n 1)"
+            [linux-x86_64]="$(find $A -name '*.AppImage' | head -n 1)"
+            [linux-x86_64-deb]="$(find $A -name '*.deb' | head -n 1)"
+            [linux-x86_64-rpm]="$(find $A -name '*.rpm' | head -n 1)"
+          )
+
+          PLATFORMS='{}'
+          for key in "${!FILES[@]}"; do
+            file="${FILES[$key]}"
+            if [ -z "$file" ] || [ ! -f "$file.sig" ]; then
+              echo "::warning::pas d'artefact signé pour $key"
+              continue
+            fi
+            # Le .sig est le texte minisign tel quel : on ne le réencode pas.
+            PLATFORMS=$(jq --arg key "$key" --arg url "$BASE_URL/$(basename "$file")" --rawfile sig "$file.sig" \
+              '. + {($key): {url: $url, signature: $sig}}' <<< "$PLATFORMS")
+          done
+
+          jq -n \
+            --arg version "$VERSION" \
+            --arg notes "Pattelock $VERSION" \
+            --arg pub_date "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            --argjson platforms "$PLATFORMS" \
+            '{version: $version, notes: $notes, pub_date: $pub_date, platforms: $platforms}' > latest.json
+          cat latest.json
+          gh release upload $VERSION latest.json --clobber
 
       - name: Make release public
         env:

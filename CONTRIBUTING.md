@@ -48,6 +48,9 @@ Pull requests run the same checks in CI, on Windows, macOS and Linux:
 - **UI text**: the interface is in French and English. Add every new string to both languages in [`src/i18n.ts`](src/i18n.ts) (and to the tray menu in `src-tauri/src/tray.rs` if needed). Do not use em dashes in UI strings.
 - Keep modules small and add comments where logic is complex, especially in the keyboard hooks.
 
+### Releases
+Pushing to `main` with a new version in `package.json` publishes a release (see [`.github/workflows/release.yml`](.github/workflows/release.yml)), together with the `latest.json` file read by the in-app updater. Release artifacts are signed with the updater key, stored in the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository secrets. Local builds (`npm run build`) don't need the key: signed updater artifacts are only enabled by `src-tauri/tauri.release.conf.json` in CI.
+
 ### Adding a Cat Coat
 Coats are a simple palette table in [`src/cat/skins.ts`](src/cat/skins.ts). Add an entry with the outline, fur, muzzle, pink, eye and highlight colors. For patterns such as stripes, use the optional `S` color: sprite pixels marked `S` fall back to the fur color on coats that don't define it.
 

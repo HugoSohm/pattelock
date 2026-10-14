@@ -9,6 +9,7 @@ mod settings;
 mod shortcut;
 mod state;
 mod tray;
+mod updater;
 mod window;
 
 use std::sync::Arc;
@@ -37,8 +38,10 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(hotkey::plugin())
         .plugin(autostart::plugin())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(window::MonitorTracker::default())
         .manage(CursorFollow::default())
+        .manage(updater::Updates::default())
         .setup(|app| {
             let handle = app.handle().clone();
             let core = Core::start(&handle)?;
@@ -54,6 +57,7 @@ pub fn run() {
             }
             window::create_main(&handle, theme)?;
             tray::create(&handle, mode, lang)?;
+            updater::start(handle.clone());
             // Filet de sécurité : la fenêtre s'affiche même si le front ne répond pas.
             std::thread::spawn(move || {
                 std::thread::sleep(SHOW_FALLBACK);
@@ -86,6 +90,7 @@ pub fn run() {
             commands::set_cat_anchor,
             commands::ui_ready,
             commands::hide_window,
+            commands::install_update,
         ])
         .build(tauri::generate_context!())
         .expect("erreur au lancement de Pattelock");

@@ -76,6 +76,15 @@ export interface Settings {
   autostart: boolean;
   mediaKeys: boolean;
   language: LangPref;
+  /** Rechercher les mises à jour (seul accès réseau de l'app). */
+  checkUpdates: boolean;
+}
+
+export interface UpdateInfo {
+  version: string;
+  status: "available" | "downloading" | "installing" | "failed";
+  /** Progression du téléchargement, en %. */
+  progress?: number;
 }
 
 export interface AppState {
@@ -86,6 +95,8 @@ export interface AppState {
   total: number;
   platform: Platform;
   guard: GuardStatus;
+  /** Mise à jour disponible ou en cours d'installation. */
+  update: UpdateInfo | null;
 }
 
 export interface KeyIntercepted {

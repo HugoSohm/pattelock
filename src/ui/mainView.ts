@@ -14,6 +14,7 @@ export interface MainHandlers {
   onLockAll(): void;
   onKey(id: KeyId): void;
   onAllKeys(blocked: boolean): void;
+  onInstallUpdate(): void;
   onChangeShortcut(): void;
 }
 
@@ -61,6 +62,18 @@ export function createMainView(handlers: MainHandlers): MainView {
   const countText = h("span");
   const activity = h("div", { class: "activity" }, paw(), h("span", {}, count, " ", countText));
 
+  // Mise à jour disponible : un texte et un bouton, sous le compteur.
+  const updateText = h("span");
+  const updateBtn = h("button", { class: "change", attrs: { type: "button" } });
+  updateBtn.addEventListener("click", () => handlers.onInstallUpdate());
+  const updateBar = h(
+    "div",
+    { class: "update-bar", attrs: { role: "status" } },
+    paw(),
+    updateText,
+    updateBtn,
+  );
+
   const lockLabel = h("span");
   const lockall = h("button", {
     class: "lockall",
@@ -82,6 +95,7 @@ export function createMainView(handlers: MainHandlers): MainView {
     legend,
     activity,
     banner,
+    updateBar,
     h("div", { class: "footer" }, lockall, shortcut),
   );
 
@@ -182,7 +196,37 @@ export function createMainView(handlers: MainHandlers): MainView {
       );
       scInfo.replaceChildren(...nodes);
     }
+    renderUpdate(s);
     setTotal(s.total);
+  }
+
+  function renderUpdate(s: AppState): void {
+    const u = s.update;
+    updateBar.hidden = u === null;
+    if (!u) return;
+    updateBar.classList.toggle("failed", u.status === "failed");
+    switch (u.status) {
+      case "available":
+        setText(updateText, t("update.available", { version: u.version }));
+        setText(updateBtn, t("update.install"));
+        break;
+      case "downloading":
+        setText(
+          updateText,
+          u.progress === undefined
+            ? t("update.downloadingNoSize")
+            : t("update.downloading", { p: u.progress }),
+        );
+        break;
+      case "installing":
+        setText(updateText, t("update.installing"));
+        break;
+      case "failed":
+        setText(updateText, t("update.failed"));
+        setText(updateBtn, t("update.retry"));
+        break;
+    }
+    updateBtn.hidden = u.status === "downloading" || u.status === "installing";
   }
 
   function setTotal(total: number): void {

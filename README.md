@@ -30,7 +30,8 @@
 - 🎨 **Animated pixel cat**: it breathes and snores while asleep, and follows your cursor with its eyes when awake. Five coats, four accent colors, light, dark or system theme.
 - 🌍 **English & French**: follows your system language, or pick one in the settings.
 - 🗂️ **Lives in the tray**: closing the window keeps Pattelock running in the taskbar or menu bar, and it can start with your session.
-- 🔒 **100% local**: no network calls, no telemetry. Settings and the counter stay on your machine.
+- 🔄 **Automatic updates**: Pattelock checks GitHub for a new version and installs it in one click. You can turn the check off in the settings.
+- 🔒 **Private by design**: no telemetry. The only network call is the optional update check. Settings and the counter stay on your machine.
 
 ---
 

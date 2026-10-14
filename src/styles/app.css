@@ -472,13 +472,37 @@ kbd {
   opacity: 0.45;
 }
 
+/* Mise à jour disponible, sous le compteur. */
+.update-bar {
+  margin-top: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  background: var(--kbd);
+  color: var(--ink);
+  font-size: 0.75rem;
+}
+.update-bar .paw {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+.update-bar .change {
+  height: 1.75rem;
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+}
+.update-bar.failed .paw {
+  color: var(--led-off);
+}
+
 /* ---------- Réglages ---------- */
 .settings {
   flex: 1;
   padding: 1.625rem 2rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.625rem;
+  gap: 1.375rem;
 }
 .section {
   display: flex;
@@ -581,7 +605,7 @@ kbd {
   gap: 0.25rem;
 }
 .opt {
-  height: 2.75rem;
+  height: 2.5rem;
   padding: 0;
   background: transparent;
   display: flex;

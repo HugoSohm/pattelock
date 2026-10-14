@@ -116,7 +116,7 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
   rovingRadios(langs);
 
   // Interrupteurs
-  const option = (key: "autostart" | "mediaKeys") => {
+  const option = (key: "autostart" | "mediaKeys" | "checkUpdates") => {
     const label = h("span");
     const b = h(
       "button",
@@ -131,6 +131,7 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
   };
   const autostart = option("autostart");
   const media = option("mediaKeys");
+  const updates = option("checkUpdates");
 
   const el = h(
     "div",
@@ -144,7 +145,7 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
       section("settings.theme", "lbl-theme", themes),
       section("settings.language", "lbl-lang", langs),
     ),
-    h("div", { class: "opts" }, autostart.b, media.b),
+    h("div", { class: "opts" }, autostart.b, updates.b, media.b),
   );
 
   function update(s: AppState, dark: boolean): void {
@@ -176,6 +177,8 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
     media.b.setAttribute("aria-checked", String(s.settings.mediaKeys));
     setText(media.label, t("opt.media"));
     media.b.hidden = s.platform !== "macos";
+    updates.b.setAttribute("aria-checked", String(s.settings.checkUpdates));
+    setText(updates.label, t("opt.updates"));
   }
 
   function rescale(): void {

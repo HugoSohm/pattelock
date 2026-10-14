@@ -10,7 +10,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use serde_json::json;
-use tauri::{AppHandle, Emitter, Wry};
+use tauri::{AppHandle, Emitter, Manager, Wry};
 use tauri_plugin_store::{Store, StoreBuilder};
 
 use crate::counter::{Counter, Throttle};
@@ -38,6 +38,8 @@ pub struct AppState {
     pub total: u64,
     pub platform: &'static str,
     pub guard: GuardStatus,
+    /// Mise à jour disponible ou en cours d'installation.
+    pub update: Option<crate::updater::UpdateInfo>,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -49,6 +51,7 @@ pub struct SettingsView {
     pub autostart: bool,
     pub media_keys: bool,
     pub language: LanguagePref,
+    pub check_updates: bool,
 }
 
 #[derive(Serialize, Clone)]
@@ -149,7 +152,12 @@ impl Core {
                 autostart: p.autostart,
                 media_keys: p.media_keys,
                 language: p.language,
+                check_updates: p.check_updates,
             },
+            update: self
+                .app
+                .try_state::<crate::updater::Updates>()
+                .and_then(|u| u.info()),
             total: self.counter.total(),
             platform: PLATFORM,
             guard: self.guard.status(),
@@ -235,6 +243,7 @@ impl Core {
 
     pub fn update_settings(&self, mut patch: SettingsPatch) {
         let theme_changed = patch.theme.is_some();
+        let updates_toggled = patch.check_updates;
         if let Some(enabled) = patch.autostart {
             if let Err(e) = crate::autostart::set(&self.app, enabled) {
                 log::error!("lancement au démarrage non modifié : {e}");
@@ -249,6 +258,11 @@ impl Core {
             crate::window::apply_theme(&self.app, self.prefs().theme);
         }
         self.commit();
+        match updates_toggled {
+            Some(true) => crate::updater::check_now(&self.app),
+            Some(false) => crate::updater::forget(&self.app),
+            None => {}
+        }
     }
 
     /// Enregistrement d'un nouveau raccourci : l'actuel est suspendu pour ne pas basculer

@@ -30,9 +30,9 @@ Pattelock is a small desktop app built with **Tauri v2**, **Vite** and **TypeScr
 
 ## 4. Tauri v2 Specifics
 *   **Version Fidelity**: Tauri v2 only. Never use v1 APIs or config (`allowlist`, `tauri::api::*`, `SystemTray`, `@tauri-apps/api/tauri`). Permissions go in `src-tauri/capabilities/*.json`.
-*   **Plugins**: global-shortcut, autostart, single-instance, store and log. Do not add plugins without asking.
+*   **Plugins**: global-shortcut, autostart, single-instance, store, log and updater. Do not add plugins without asking.
 *   **Main window**: created in Rust ([`window.rs`](src-tauri/src/window.rs)), hidden until the frontend calls `ui_ready`, sized to about one third of the screen's work area and centered.
-*   **No network**: strict CSP, fonts embedded, no CDN. Never use `innerHTML` or `style` attributes in the frontend; set styles through the CSSOM.
+*   **Network**: the only network access is the update check (`tauri-plugin-updater`, Rust side, [`updater.rs`](src-tauri/src/updater.rs)), and it can be turned off in the settings. The webview makes no network calls: strict CSP, fonts embedded, no CDN. Never use `innerHTML` or `style` attributes in the frontend; set styles through the CSSOM.
 
 ## 5. Design & Code Style
 *   **Pixel art**: everything moves by frames or by whole sprite pixels, with `steps()` timings. No rotation, blur or sub-pixel movement. Sprites are drawn on canvas with an integer pixel size.
