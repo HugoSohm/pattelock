@@ -18,7 +18,13 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "nsis",
+      "app",
+      "appimage",
+      "deb",
+      "rpm"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -31,8 +37,30 @@
     "copyright": "Copyright © 2026 Hugo Sohm",
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico"
       }
+    },
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/lib/udev/rules.d/70-pattelock.rules": "../packaging/linux/70-pattelock.rules",
+          "/usr/lib/modules-load.d/pattelock.conf": "../packaging/linux/pattelock-uinput.conf"
+        },
+        "postInstallScript": "../packaging/linux/postinst.sh",
+        "depends": []
+      },
+      "rpm": {
+        "files": {
+          "/usr/lib/udev/rules.d/70-pattelock.rules": "../packaging/linux/70-pattelock.rules",
+          "/usr/lib/modules-load.d/pattelock.conf": "../packaging/linux/pattelock-uinput.conf"
+        },
+        "postInstallScript": "../packaging/linux/postinst.sh"
+      }
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "10.15"
     }
   }
 }

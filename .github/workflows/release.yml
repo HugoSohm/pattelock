@@ -1,0 +1,188 @@
+name: "Publish Release"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check-version:
+    name: "Check Version"
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+      body: ${{ steps.check.outputs.body }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Check version and extract changelog
+        id: check
+        shell: bash
+        run: |
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Version $VERSION already exists. Skipping release."
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version $VERSION is new. Proceeding with release."
+            echo "should_release=true" >> $GITHUB_OUTPUT
+
+            node -e "
+              const fs = require('fs');
+              const version = '$VERSION';
+              const content = fs.readFileSync('Changelog.md', 'utf8').split('\n');
+              const startIdx = content.findIndex(l => l.startsWith('## ' + version));
+              if (startIdx === -1) {
+                fs.writeFileSync('extracted_changelog.txt', '### Version ' + version);
+                process.exit(0);
+              }
+              const nextIdx = content.slice(startIdx + 1).findIndex(l => l.startsWith('## '));
+              const body = content.slice(startIdx + 1, nextIdx === -1 ? undefined : startIdx + 1 + nextIdx).join('\n').trim();
+              fs.writeFileSync('extracted_changelog.txt', body);
+            "
+
+            DELIMITER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+            echo "body<<$DELIMITER" >> $GITHUB_OUTPUT
+            cat extracted_changelog.txt >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "$DELIMITER" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    name: "Build ${{ matrix.os_name }}"
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest-amd64, macos-latest-arm64, ubuntu-22.04, windows-latest, windows-latest-arm64]
+        include:
+          - platform: macos-latest-arm64
+            real_platform: macos-latest
+            arch: aarch64
+            os_name: "macOS (Apple Silicon)"
+            args: "--target aarch64-apple-darwin --bundles app"
+          - platform: macos-latest-amd64
+            real_platform: macos-latest
+            arch: x64
+            os_name: "macOS (Intel)"
+            args: "--target x86_64-apple-darwin --bundles app"
+          - platform: ubuntu-22.04
+            real_platform: ubuntu-22.04
+            arch: x64
+            os_name: "Linux"
+            args: "--bundles appimage,deb,rpm"
+          - platform: windows-latest
+            real_platform: windows-latest
+            arch: x64
+            os_name: "Windows (x64)"
+            args: "--bundles nsis"
+          - platform: windows-latest-arm64
+            real_platform: windows-latest
+            arch: arm64
+            os_name: "Windows (ARM64)"
+            args: "--target aarch64-pc-windows-msvc --bundles nsis"
+
+    runs-on: ${{ matrix.real_platform }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.real_platform == 'macos-latest' && (matrix.arch == 'x64' && 'x86_64-apple-darwin' || 'aarch64-apple-darwin') || (matrix.real_platform == 'windows-latest' && matrix.arch == 'arm64' && 'aarch64-pc-windows-msvc' || '') }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.real_platform }}-${{ matrix.arch }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.real_platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libjavascriptcoregtk-4.1-dev libsoup-3.0-dev rpm
+
+      - name: install frontend dependencies
+        run: npm ci
+
+      - name: build and bundle
+        uses: tauri-apps/tauri-action@v0
+        with:
+          args: ${{ matrix.args }}
+
+      - name: Package macOS DMG
+        if: matrix.real_platform == 'macos-latest'
+        shell: bash
+        run: |
+          chmod +x scripts/macos/build.sh
+          ARCH_OVERRIDE="${{ matrix.arch }}" ./scripts/macos/build.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifacts-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            src-tauri/target/**/bundle/**/*.exe
+            src-tauri/target/**/bundle/**/*.AppImage
+            src-tauri/target/**/bundle/**/*.deb
+            src-tauri/target/**/bundle/**/*.rpm
+            dist/*.dmg
+
+  publish:
+    name: "Publish Release"
+    needs: [check-version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: ./all-artifacts
+          pattern: artifacts-*
+          merge-multiple: true
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ needs.check-version.outputs.body }}
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          gh release create $VERSION \
+            --title "Pattelock $VERSION" \
+            --notes "$RELEASE_NOTES" \
+            --draft
+
+      - name: Upload Assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          find ./all-artifacts -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) -exec gh release upload $VERSION {} --clobber \;
+
+      - name: Make release public
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          gh release edit $VERSION --draft=false
