@@ -1,5 +1,5 @@
-// Construit docs/maquette/anim-demo.html : la page de démo des animations en un seul
-// fichier autonome (JS, CSS et polices embarqués), comme la maquette.
+// Construit docs/anim-demo.html : la page de démo des animations en un seul
+// fichier autonome (JS, CSS et polices embarqués), à ouvrir directement dans un navigateur.
 //
 //   npm run demo:build
 import { writeFileSync } from "node:fs";
@@ -51,6 +51,6 @@ const html = `<!doctype html>
 </body>
 </html>
 `;
-const target = join(ROOT, "docs/maquette/anim-demo.html");
+const target = join(ROOT, "docs/anim-demo.html");
 writeFileSync(target, html);
 console.log(`écrit ${target} (${Math.round(html.length / 1024)} Ko)`);

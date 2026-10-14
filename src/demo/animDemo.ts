@@ -1,7 +1,7 @@
 /**
- * Page de démo des animations du chat (docs/maquette/anim-demo.html).
+ * Page de démo des animations du chat (docs/anim-demo.html).
  * En développement : http://localhost:1420/anim-demo.html
- * Version autonome : `npm run demo:build` (écrit docs/maquette/anim-demo.html).
+ * Version autonome : `npm run demo:build` (écrit docs/anim-demo.html).
  */
 import "../styles/fonts.css";
 import "../styles/tokens.css";
