@@ -88,7 +88,7 @@ fn decide(shared: &Shared, kb: &KBDLLHOOKSTRUCT, down: bool) -> bool {
         match shared.mode() {
             GuardMode::Off => false,
             GuardMode::FKeys => {
-                let Some(key) = from_windows_vk(vk) else {
+                let Some(key) = from_windows_vk(vk, ext) else {
                     return false;
                 };
                 if shared.mask() & key.bit() == 0 {
@@ -103,7 +103,7 @@ fn decide(shared: &Shared, kb: &KBDLLHOOKSTRUCT, down: bool) -> bool {
                 if combo == ComboEvent::Unlock {
                     shared.unlock_pressed();
                 } else if first_press {
-                    shared.intercepted(from_windows_vk(vk));
+                    shared.intercepted(from_windows_vk(vk, ext));
                 }
                 // Tout est avalé, y compris les modificateurs (suivis ci-dessus).
                 true

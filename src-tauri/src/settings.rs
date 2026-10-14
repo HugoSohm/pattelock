@@ -75,7 +75,7 @@ pub struct Prefs {
 impl Default for Prefs {
     fn default() -> Self {
         Self {
-            blocked: BlockableKey::ALL.to_vec(),
+            blocked: BlockableKey::DEFAULT.to_vec(),
             active: true,
             shortcut: Shortcut::default(),
             skin: DEFAULT_SKIN.into(),

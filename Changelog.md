@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Esc and the Insert, Home, Page Up, Delete, End and Page Down keys can be blocked too. The strip now has two rows. They are not blocked by default, and they can no longer be used in the global shortcut.
+
 ## 0.1.0
 
 First release.

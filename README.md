@@ -13,7 +13,7 @@
 
 ---
 
-**Pattelock** is a small desktop app for **cat owners who work at a computer**. When your cat lies down on the keyboard, F1 to F12, Print Screen, Scroll Lock and Pause stop doing anything: no help page, no reload, no full screen, no screenshot. Need more? Lock the whole keyboard in one click. Your mouse keeps working.
+**Pattelock** is a small desktop app for **cat owners who work at a computer**. When your cat lies down on the keyboard, the keys you pick among Esc, F1 to F12, Print Screen, Scroll Lock, Pause and the Insert / Home / Page Up / Delete / End / Page Down block stop doing anything: no help page, no reload, no full screen, no screenshot. Need more? Lock the whole keyboard in one click. Your mouse keeps working.
 
 <div align="center">
   <img src="docs/screenshots/active-light.png" width="380" alt="Pattelock with protection on, light theme" />
@@ -22,7 +22,7 @@
 
 ### ✨ Features
 
-- 🐾 **System-wide blocking**: F1 to F12, Print Screen, Scroll Lock and Pause are swallowed even when Pattelock is in the background. Click a key on the strip to block or free it.
+- 🐾 **System-wide blocking**: Esc, F1 to F12, Print Screen, Scroll Lock, Pause and the navigation block (Insert, Home, Page Up, Delete, End, Page Down) are swallowed even when Pattelock is in the background. Click a key on the strip to block or free it. The top row is blocked by default.
 - 😺 **The cat is the switch**: it sleeps while protection is on and wakes up when it's paused. Click it to toggle.
 - 🔒 **Lock the whole keyboard**: every key is ignored except the unlock shortcut. Get out with the "Unlock keyboard" button, by clicking the cat, with the shortcut or from the tray.
 - ⌨️ **Global shortcut**: `Ctrl + Alt + K` (`Cmd + Option + K` on macOS) toggles protection from anywhere. Change it with one click.
@@ -91,7 +91,7 @@ You can never get locked out:
 ### ⚠️ Known Limitations
 
 - **Windows**: when a window running as administrator has focus, Windows does not send keys to Pattelock's hook.
-- **macOS**: Macs have no Print Screen, Scroll Lock or Pause keys, so they become F13, F14 and F15. The top row often sends media functions (brightness, volume): the "also block media functions" option (on by default) blocks them along with the matching F key. During secure input (password fields), macOS hides keystrokes from all apps. Some keys (Globe / fn) are handled below Pattelock.
+- **macOS**: Macs have no Print Screen, Scroll Lock or Pause keys, so they become F13, F14 and F15, and Insert is the Help key. The top row often sends media functions (brightness, volume): the "also block media functions" option (on by default) blocks them along with the matching F key. During secure input (password fields), macOS hides keystrokes from all apps. Some keys (Globe / fn) are handled below Pattelock.
 - **Linux X11**: a key already reserved by your desktop (often Print Screen for screenshots) cannot be blocked. Pattelock tells you which ones.
 
 ---

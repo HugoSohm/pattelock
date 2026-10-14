@@ -51,7 +51,11 @@ export function guardBanner(guard: GuardStatus, platform: Platform): string | nu
     return guard.detail ? `${reason} (${guard.detail})` : reason;
   }
   if (guard.kind === "partial") {
-    const names = new Map(keyGroups(platform).flatMap((g) => g.map((k) => [k.id, k.name] as const)));
+    const names = new Map(
+      keyGroups(platform)
+        .flat()
+        .flatMap((g) => g.map((k) => [k.id, k.name] as const)),
+    );
     const keys = guard.unavailable.map((k) => names.get(k) ?? k).join(", ");
     return t("reason.partial", { keys });
   }

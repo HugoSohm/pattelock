@@ -1,8 +1,20 @@
 import type { AppState, KeyId } from "../types.ts";
 
+const NAV_CODES: ReadonlySet<string> = new Set([
+  "Escape",
+  "Insert",
+  "Home",
+  "PageUp",
+  "Delete",
+  "End",
+  "PageDown",
+]);
+
 /** `KeyboardEvent.code` vers touche de la bande (sur Mac, F13 à F15 remplacent Impr., Défil., Pause). */
-function keyIdOf(code: string, mac: boolean): KeyId | null {
+export function keyIdOf(code: string, mac: boolean): KeyId | null {
   if (/^F([1-9]|1[0-2])$/.test(code)) return code as KeyId;
+  // `code` distingue déjà le pavé numérique (`Numpad7`...) du bloc de navigation.
+  if (NAV_CODES.has(code)) return code as KeyId;
   if (mac) {
     if (code === "F13") return "PrintScreen";
     if (code === "F14") return "ScrollLock";

@@ -21,6 +21,13 @@ export const KEY_IDS = [
   "PrintScreen",
   "ScrollLock",
   "Pause",
+  "Escape",
+  "Insert",
+  "Home",
+  "PageUp",
+  "Delete",
+  "End",
+  "PageDown",
 ] as const;
 export type KeyId = (typeof KEY_IDS)[number];
 

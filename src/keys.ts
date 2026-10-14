@@ -10,17 +10,31 @@ export interface KeyDef {
   wide: boolean;
 }
 
-/** Les 4 groupes de la bande clavier. Sur Mac, les 3 touches spéciales sont F13 à F15. */
-export function keyGroups(platform: Platform): KeyDef[][] {
+/**
+ * La bande clavier : deux rangées de groupes. En haut Échap et les touches F, en bas
+ * les 3 touches spéciales et le bloc de navigation. Sur Mac, les touches spéciales sont
+ * F13 à F15 et Inser est la touche Aide.
+ */
+export function keyGroups(platform: Platform): KeyDef[][][] {
   const f = (n: number): KeyDef => {
     const id = `F${n}` as KeyId;
     return { id, label: id, name: id, wide: false };
   };
+  type NavKey = "escape" | "insert" | "help" | "home" | "pageUp" | "delete" | "end" | "pageDown";
+  const nav = (id: KeyId, key: NavKey): KeyDef => ({
+    id,
+    label: t(`key.${key}`),
+    name: t(`key.${key}.name`),
+    wide: true,
+  });
   const mac = platform === "macos";
-  return [
+  const top: KeyDef[][] = [
+    [nav("Escape", "escape")],
     [f(1), f(2), f(3), f(4)],
     [f(5), f(6), f(7), f(8)],
     [f(9), f(10), f(11), f(12)],
+  ];
+  const bottom: KeyDef[][] = [
     [
       {
         id: "PrintScreen",
@@ -36,7 +50,10 @@ export function keyGroups(platform: Platform): KeyDef[][] {
       },
       { id: "Pause", label: mac ? "F15" : t("key.pause"), name: mac ? "F15" : t("key.pause"), wide: true },
     ],
+    [nav("Insert", mac ? "help" : "insert"), nav("Home", "home"), nav("PageUp", "pageUp")],
+    [nav("Delete", "delete"), nav("End", "end"), nav("PageDown", "pageDown")],
   ];
+  return [top, bottom];
 }
 
 /** Touches que le raccourci n'a pas le droit d'utiliser (elles peuvent être bloquées). */
@@ -59,6 +76,13 @@ export const BLOCKABLE_CODES: ReadonlySet<string> = new Set([
   "PrintScreen",
   "ScrollLock",
   "Pause",
+  "Escape",
+  "Insert",
+  "Home",
+  "PageUp",
+  "Delete",
+  "End",
+  "PageDown",
 ]);
 
 export const MODIFIER_CODES: ReadonlySet<string> = new Set([

@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Une des 15 touches de la bande clavier.
+/// Une des 22 touches de la bande clavier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum BlockableKey {
     F1,
@@ -25,10 +25,44 @@ pub enum BlockableKey {
     PrintScreen,
     ScrollLock,
     Pause,
+    Escape,
+    Insert,
+    Home,
+    PageUp,
+    Delete,
+    End,
+    PageDown,
 }
 
 impl BlockableKey {
-    pub const ALL: [BlockableKey; 15] = [
+    pub const ALL: [BlockableKey; 22] = [
+        Self::F1,
+        Self::F2,
+        Self::F3,
+        Self::F4,
+        Self::F5,
+        Self::F6,
+        Self::F7,
+        Self::F8,
+        Self::F9,
+        Self::F10,
+        Self::F11,
+        Self::F12,
+        Self::PrintScreen,
+        Self::ScrollLock,
+        Self::Pause,
+        Self::Escape,
+        Self::Insert,
+        Self::Home,
+        Self::PageUp,
+        Self::Delete,
+        Self::End,
+        Self::PageDown,
+    ];
+
+    /// Touches bloquées au premier lancement : la rangée du haut. Échap et le bloc de
+    /// navigation servent tout le temps, on laisse l'utilisateur les cocher lui-même.
+    pub const DEFAULT: [BlockableKey; 15] = [
         Self::F1,
         Self::F2,
         Self::F3,
@@ -72,6 +106,13 @@ impl BlockableKey {
             Self::PrintScreen => "PrintScreen",
             Self::ScrollLock => "ScrollLock",
             Self::Pause => "Pause",
+            Self::Escape => "Escape",
+            Self::Insert => "Insert",
+            Self::Home => "Home",
+            Self::PageUp => "PageUp",
+            Self::Delete => "Delete",
+            Self::End => "End",
+            Self::PageDown => "PageDown",
         }
     }
 
@@ -96,7 +137,7 @@ pub fn keys_of(mask: u32) -> Vec<BlockableKey> {
 
 /// Codes `KeyboardEvent.code` des touches bloquables (et F13 à F15 sur Mac) : le
 /// raccourci ne peut pas les utiliser.
-pub const BLOCKABLE_CODES: [&str; 18] = [
+pub const BLOCKABLE_CODES: [&str; 25] = [
     "F1",
     "F2",
     "F3",
@@ -115,26 +156,59 @@ pub const BLOCKABLE_CODES: [&str; 18] = [
     "PrintScreen",
     "ScrollLock",
     "Pause",
+    "Escape",
+    "Insert",
+    "Home",
+    "PageUp",
+    "Delete",
+    "End",
+    "PageDown",
 ];
 
 // ---------------------------------------------------------------- Windows
 
-/// Virtual-key code Windows (`VK_F1`..`VK_F12`, `VK_SNAPSHOT`, `VK_SCROLL`, `VK_PAUSE`).
+/// Virtual-key code Windows (`VK_F1`..`VK_F12`, `VK_SNAPSHOT`, `VK_SCROLL`, `VK_PAUSE`,
+/// `VK_ESCAPE`, `VK_INSERT`...).
 #[cfg_attr(not(windows), allow(dead_code))]
 pub fn windows_vk(key: BlockableKey) -> u16 {
     match key {
         BlockableKey::PrintScreen => 0x2C,
         BlockableKey::ScrollLock => 0x91,
         BlockableKey::Pause => 0x13,
+        BlockableKey::Escape => 0x1B,
+        BlockableKey::Insert => 0x2D,
+        BlockableKey::Home => 0x24,
+        BlockableKey::PageUp => 0x21,
+        BlockableKey::Delete => 0x2E,
+        BlockableKey::End => 0x23,
+        BlockableKey::PageDown => 0x22,
         f => 0x70 + f.index() as u16,
     }
 }
 
+/// Touche bloquable d'un événement Windows. Sans Verr. num., le pavé numérique envoie les
+/// mêmes virtual-keys que le bloc de navigation, mais sans l'indicateur « étendu » :
+/// on ne retient que le vrai bloc.
 #[cfg_attr(not(windows), allow(dead_code))]
-pub fn from_windows_vk(vk: u32) -> Option<BlockableKey> {
+pub fn from_windows_vk(vk: u32, extended: bool) -> Option<BlockableKey> {
     BlockableKey::ALL
         .into_iter()
         .find(|k| u32::from(windows_vk(*k)) == vk)
+        .filter(|k| extended || !is_navigation(*k))
+}
+
+/// Bloc Inser / Début / Pg préc / Suppr / Fin / Pg suiv.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn is_navigation(key: BlockableKey) -> bool {
+    matches!(
+        key,
+        BlockableKey::Insert
+            | BlockableKey::Home
+            | BlockableKey::PageUp
+            | BlockableKey::Delete
+            | BlockableKey::End
+            | BlockableKey::PageDown
+    )
 }
 
 /// Scancode Windows (jeu 1) d'une touche de raccourci, avec l'indicateur « étendu ».
@@ -205,6 +279,13 @@ pub fn macos_keycode(key: BlockableKey) -> u16 {
         BlockableKey::PrintScreen => 0x69, // F13
         BlockableKey::ScrollLock => 0x6B,  // F14
         BlockableKey::Pause => 0x71,       // F15
+        BlockableKey::Escape => 0x35,
+        BlockableKey::Insert => 0x72, // Help, à la place d'Inser
+        BlockableKey::Home => 0x73,
+        BlockableKey::PageUp => 0x74,
+        BlockableKey::Delete => 0x75, // suppression vers l'avant
+        BlockableKey::End => 0x77,
+        BlockableKey::PageDown => 0x79,
     }
 }
 
@@ -337,6 +418,13 @@ pub fn evdev_key(key: BlockableKey) -> u16 {
         BlockableKey::PrintScreen => 99, // KEY_SYSRQ
         BlockableKey::ScrollLock => 70,
         BlockableKey::Pause => 119,
+        BlockableKey::Escape => 1,
+        BlockableKey::Insert => 110,
+        BlockableKey::Home => 102,
+        BlockableKey::PageUp => 104,
+        BlockableKey::Delete => 111,
+        BlockableKey::End => 107,
+        BlockableKey::PageDown => 109,
         f => 59 + f.index() as u16, // KEY_F1 = 59 ... KEY_F10 = 68
     }
 }
@@ -454,7 +542,10 @@ mod tests {
         let mask = mask_of(&keys);
         assert_eq!(mask, 1 | (1 << 11) | (1 << 14));
         assert_eq!(keys_of(mask), keys);
-        assert_eq!(keys_of(mask_of(&BlockableKey::ALL)).len(), 15);
+        assert_eq!(keys_of(mask_of(&BlockableKey::ALL)).len(), 22);
+        assert!(BlockableKey::DEFAULT
+            .iter()
+            .all(|k| BlockableKey::ALL.contains(k)));
     }
 
     #[test]
@@ -465,9 +556,14 @@ mod tests {
         assert_eq!(windows_vk(BlockableKey::ScrollLock), 0x91); // VK_SCROLL
         assert_eq!(windows_vk(BlockableKey::Pause), 0x13); // VK_PAUSE
         for k in BlockableKey::ALL {
-            assert_eq!(from_windows_vk(u32::from(windows_vk(k))), Some(k));
+            assert_eq!(from_windows_vk(u32::from(windows_vk(k)), true), Some(k));
         }
-        assert_eq!(from_windows_vk(0x41), None); // A
+        assert_eq!(from_windows_vk(0x41, false), None); // A
+
+        // Début du pavé numérique (Verr. num. éteint) : pas le bloc de navigation.
+        assert_eq!(from_windows_vk(0x24, false), None);
+        assert_eq!(from_windows_vk(0x24, true), Some(BlockableKey::Home));
+        assert_eq!(from_windows_vk(0x1B, false), Some(BlockableKey::Escape));
     }
 
     #[test]
@@ -545,8 +641,7 @@ mod tests {
             "Slash",
             "Backquote",
             "ArrowLeft",
-            "Home",
-            "Delete",
+            "Backspace",
             "Numpad5",
         ];
         for c in codes {
@@ -554,8 +649,8 @@ mod tests {
             assert!(macos_shortcut_keycode(c).is_some(), "{c} macOS");
             assert!(evdev_code(c).is_some(), "{c} Linux");
         }
-        for c in BLOCKABLE_CODES {
-            assert!(evdev_code(c).is_none(), "{c} ne doit pas être utilisable");
+        for k in BlockableKey::ALL {
+            assert!(BLOCKABLE_CODES.contains(&k.id()), "{} absent", k.id());
         }
     }
 }

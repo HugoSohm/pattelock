@@ -100,24 +100,28 @@ export function createMainView(handlers: MainHandlers): MainView {
   );
 
   function buildKeys(platform: Platform): void {
-    for (const g of strip.querySelectorAll(".group")) g.remove();
+    for (const r of strip.querySelectorAll(".krow")) r.remove();
     keyEls.clear();
-    for (const group of keyGroups(platform)) {
-      const g = h("div", { class: "group" });
-      for (const k of group) {
-        const b = h("button", {
-          class: `key${k.wide ? " wide" : ""}`,
-          attrs: { type: "button", "data-name": k.name },
-        });
-        b.append(
-          h("span", { class: "kled", attrs: { "aria-hidden": "true" } }),
-          h("span", { text: k.label }),
-        );
-        b.addEventListener("click", () => handlers.onKey(k.id));
-        keyEls.set(k.id, b);
-        g.append(b);
+    for (const groups of keyGroups(platform)) {
+      const row = h("div", { class: "krow" });
+      strip.append(row);
+      for (const group of groups) {
+        const g = h("div", { class: "group" });
+        for (const k of group) {
+          const b = h("button", {
+            class: `key${k.wide ? " wide" : ""}`,
+            attrs: { type: "button", "data-name": k.name },
+          });
+          b.append(
+            h("span", { class: "kled", attrs: { "aria-hidden": "true" } }),
+            h("span", { text: k.label }),
+          );
+          b.addEventListener("click", () => handlers.onKey(k.id));
+          keyEls.set(k.id, b);
+          g.append(b);
+        }
+        row.append(g);
       }
-      strip.append(g);
     }
     builtFor = { platform, lang: lang() };
   }

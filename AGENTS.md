@@ -3,7 +3,7 @@
 This document provides context and critical rules for AI agents working on the Pattelock project.
 
 ## 1. Project Overview
-Pattelock is a small desktop app built with **Tauri v2**, **Vite** and **TypeScript** (no framework). It temporarily disables keyboard keys (F1 to F12, Print Screen, Scroll Lock, Pause, or the whole keyboard) so that a cat lying on the keyboard triggers nothing. It runs on Windows, macOS and Linux (X11 and Wayland), lives in the tray, and shows an animated pixel art cat. The visual reference is the app itself, see [`docs/screenshots/`](docs/screenshots/).
+Pattelock is a small desktop app built with **Tauri v2**, **Vite** and **TypeScript** (no framework). It temporarily disables keyboard keys (Esc, F1 to F12, Print Screen, Scroll Lock, Pause, the Insert / Home / Page Up / Delete / End / Page Down block, or the whole keyboard) so that a cat lying on the keyboard triggers nothing. It runs on Windows, macOS and Linux (X11 and Wayland), lives in the tray, and shows an animated pixel art cat. The visual reference is the app itself, see [`docs/screenshots/`](docs/screenshots/).
 
 ## 2. Useful Commands
 *   `npm run dev` : Starts the full development environment (Vite + Tauri Dev).
