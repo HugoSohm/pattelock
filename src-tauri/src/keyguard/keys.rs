@@ -86,6 +86,7 @@ pub fn mask_of(keys: &[BlockableKey]) -> u32 {
 }
 
 /// Touches présentes dans un masque, dans l'ordre de la bande.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub fn keys_of(mask: u32) -> Vec<BlockableKey> {
     BlockableKey::ALL
         .into_iter()
@@ -119,6 +120,7 @@ pub const BLOCKABLE_CODES: [&str; 18] = [
 // ---------------------------------------------------------------- Windows
 
 /// Virtual-key code Windows (`VK_F1`..`VK_F12`, `VK_SNAPSHOT`, `VK_SCROLL`, `VK_PAUSE`).
+#[cfg_attr(not(windows), allow(dead_code))]
 pub fn windows_vk(key: BlockableKey) -> u16 {
     match key {
         BlockableKey::PrintScreen => 0x2C,
@@ -128,6 +130,7 @@ pub fn windows_vk(key: BlockableKey) -> u16 {
     }
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 pub fn from_windows_vk(vk: u32) -> Option<BlockableKey> {
     BlockableKey::ALL
         .into_iter()
@@ -184,6 +187,7 @@ pub fn windows_scancode(code: &str) -> Option<(u16, bool)> {
 
 /// Keycode macOS (`kVK_F1`...). Les claviers Mac n'ont ni Impr. écran, ni Arrêt défil.,
 /// ni Pause : on les remplace par F13, F14 et F15.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn macos_keycode(key: BlockableKey) -> u16 {
     match key {
         BlockableKey::F1 => 0x7A,
@@ -204,6 +208,7 @@ pub fn macos_keycode(key: BlockableKey) -> u16 {
     }
 }
 
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn from_macos_keycode(code: u16) -> Option<BlockableKey> {
     BlockableKey::ALL
         .into_iter()
@@ -292,6 +297,7 @@ pub fn macos_shortcut_keycode(code: &str) -> Option<u16> {
 /// Touches média de la rangée du haut d'un clavier Mac : événements système (type 14,
 /// sous-type 8) dont `data1 >> 16` vaut un `NX_KEYTYPE_*`. On les rattache à la touche F
 /// qui les porte, pour ne les bloquer que si cette touche est bloquée.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn macos_media_key(nx_keytype: i64) -> Option<BlockableKey> {
     Some(match nx_keytype {
         3 => BlockableKey::F1,       // NX_KEYTYPE_BRIGHTNESS_DOWN
@@ -310,6 +316,7 @@ pub fn macos_media_key(nx_keytype: i64) -> Option<BlockableKey> {
 
 /// Autres fonctions de la rangée du haut, envoyées comme des touches ordinaires avec un
 /// keycode spécial (Mission Control, Launchpad, Spotlight, Dictée).
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn macos_function_row_keycode(code: u16) -> Option<BlockableKey> {
     Some(match code {
         0xA0 => BlockableKey::F3,        // Mission Control
@@ -322,6 +329,7 @@ pub fn macos_function_row_keycode(code: u16) -> Option<BlockableKey> {
 // ---------------------------------------------------------------- Linux
 
 /// Code evdev (`KEY_F1`...) d'une touche bloquable. Sous X11, keycode = evdev + 8.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub fn evdev_key(key: BlockableKey) -> u16 {
     match key {
         BlockableKey::F11 => 87,
@@ -333,6 +341,7 @@ pub fn evdev_key(key: BlockableKey) -> u16 {
     }
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub fn from_evdev_key(code: u16) -> Option<BlockableKey> {
     BlockableKey::ALL
         .into_iter()
@@ -340,6 +349,7 @@ pub fn from_evdev_key(code: u16) -> Option<BlockableKey> {
 }
 
 /// Décalage entre codes evdev et keycodes X11.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub const X11_KEYCODE_OFFSET: u16 = 8;
 
 /// Code evdev d'une touche de raccourci.

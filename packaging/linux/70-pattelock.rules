@@ -1,0 +1,5 @@
+# Pattelock : sous Wayland, Pattelock capture les claviers (/dev/input) et réémet les
+# touches non bloquées par un clavier virtuel (/dev/uinput). Cette règle donne l'accès à
+# /dev/uinput au groupe « input ». Ajoute ton utilisateur au groupe, puis reconnecte-toi :
+#   sudo usermod -aG input $USER
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"

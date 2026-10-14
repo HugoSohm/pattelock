@@ -63,8 +63,10 @@ pub enum GuardStatus {
     Ok,
     Starting,
     /// macOS : la permission Accessibilité manque.
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     NeedsAccessibility,
     /// Linux Wayland : accès à /dev/input et /dev/uinput manquant.
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     NeedsInputGroup {
         command: String,
     },
@@ -73,6 +75,7 @@ pub enum GuardStatus {
         reason: String,
     },
     /// Certaines touches n'ont pas pu être bloquées (déjà prises par le système).
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Partial {
         unavailable: Vec<BlockableKey>,
         reason: String,
@@ -113,10 +116,12 @@ impl Shared {
         self.mask.load(Ordering::Acquire)
     }
 
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub fn blocked_keys(&self) -> Vec<BlockableKey> {
         keys_of(self.mask())
     }
 
+    #[cfg_attr(windows, allow(dead_code))]
     pub fn is_blocked(&self, key: BlockableKey) -> bool {
         self.mode() == GuardMode::FKeys && self.mask() & key.bit() != 0
     }
@@ -125,6 +130,7 @@ impl Shared {
         Unlock::unpack(self.unlock.load(Ordering::Acquire))
     }
 
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     pub fn media_keys(&self) -> bool {
         self.media_keys.load(Ordering::Acquire)
     }

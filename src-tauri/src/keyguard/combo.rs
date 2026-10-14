@@ -33,6 +33,7 @@ impl Mods {
 
 /// Une touche de modification, côté gauche ou droit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(target_os = "macos", allow(dead_code))]
 pub enum ModKey {
     CtrlL,
     CtrlR,
@@ -44,6 +45,7 @@ pub enum ModKey {
     MetaR,
 }
 
+#[cfg_attr(target_os = "macos", allow(dead_code))]
 impl ModKey {
     fn slot(self) -> u8 {
         self as u8
@@ -115,6 +117,7 @@ pub fn native_code(code: &str) -> Option<u32> {
 }
 
 /// Code natif Windows : scancode, avec le bit 8 pour les touches étendues.
+#[cfg_attr(not(windows), allow(dead_code))]
 pub fn windows_native(scancode: u16, extended: bool) -> u32 {
     u32::from(scancode) | if extended { 0x100 } else { 0 }
 }
@@ -127,6 +130,7 @@ pub struct ModTracker {
 
 /// Résultat du traitement d'une touche par le tracker.
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(target_os = "macos", allow(dead_code))]
 pub enum ComboEvent {
     /// Touche de modification (enfoncée ou relâchée).
     Modifier,
@@ -136,6 +140,7 @@ pub enum ComboEvent {
     Other,
 }
 
+#[cfg_attr(target_os = "macos", allow(dead_code))]
 impl ModTracker {
     pub fn modifier(&mut self, key: ModKey, down: bool) {
         if down {
@@ -155,6 +160,7 @@ impl ModTracker {
         )
     }
 
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub fn reset(&mut self) {
         self.down = 0;
     }
