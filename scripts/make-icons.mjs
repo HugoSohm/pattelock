@@ -1,4 +1,4 @@
-// Génère les icônes de Pattelock à partir du sprite du chat assis (pelage noir).
+// Génère les icônes de Pattelock à partir de la patte de la maquette.
 //
 //   node scripts/make-icons.mjs
 //
@@ -7,9 +7,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SKINS } from "../src/cat/skins.ts";
-import { encodePng, grid, rgba, stamp } from "./lib/png.mjs";
-import { FRAMES } from "../src/cat/sprite.ts";
+import { encodePng, grid, rgba } from "./lib/png.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ICONS = join(ROOT, "src-tauri", "icons");
@@ -17,12 +15,19 @@ const ICONS = join(ROOT, "src-tauri", "icons");
 const BG = rgba("#fbfaf7");
 const INK = rgba("#1f1b24");
 const ACCENT = rgba("#ff9548");
-const noir = SKINS[0].palette;
 
-const Z_SMALL = ["XXX", "..X", ".X.", "XXX"];
-const Z_BIG = ["XXXX", "...X", "..X.", ".X..", "XXXX"];
+/** La patte de la maquette (5 x 5), marque de Pattelock. */
+const PAW = ["#.#.#", ".....", ".###.", "#####", ".###."];
 
-// ---------- Icône de l'app : tuile crème crantée, chat qui dort sur la bande ----------
+/** Patte agrandie : chaque pixel devient un carré de `k` x `k`. */
+function pawMask(k) {
+  return PAW.flatMap((line) => {
+    const row = [...line].flatMap((c) => Array(k).fill(c === "#"));
+    return Array.from({ length: k }, () => row);
+  });
+}
+
+// ---------- Icône de l'app : tuile crème crantée, grande patte orange cernée d'encre ----------
 function appIcon() {
   const N = 32;
   const g = grid(N, N);
@@ -35,31 +40,42 @@ function appIcon() {
       g[y][x] = edgeX || edgeY ? INK : BG;
     }
   }
-  // Bande clavier sous le chat.
-  for (let y = 25; y <= 27; y++) for (let x = 3; x <= 28; x++) g[y][x] = INK;
-  for (const x of [6, 10, 14, 18, 22, 26]) g[26][x] = ACCENT;
-  // Chat qui dort, ligne du bas posée sur la bande.
-  stamp(g, FRAMES.sleep, 6, 5, (ch) => (ch in noir ? rgba(noir[ch]) : null));
-  // « z Z »
-  stamp(g, Z_SMALL, 23, 9, (ch) => (ch === "X" ? ACCENT : null));
-  stamp(g, Z_BIG, 25, 2, (ch) => (ch === "X" ? ACCENT : null));
+  // Patte 20 x 20 (4 cellules par pixel), centrée, avec un liseré encre d'une cellule.
+  const mask = pawMask(4);
+  const ox = 6;
+  const oy = 6;
+  const filled = (x, y) => mask[y - oy]?.[x - ox] === true;
+  for (let y = oy - 1; y <= oy + 20; y++) {
+    for (let x = ox - 1; x <= ox + 20; x++) {
+      if (filled(x, y)) g[y][x] = ACCENT;
+      else if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) g[y][x] = INK;
+    }
+  }
   return g;
 }
 
-// ---------- Tray : silhouette monochrome, yeux en creux ----------
-// `mood` : "sleep" (protection active) ou "awake" (pause).
-function trayIcon(mood, color) {
-  const rows = FRAMES[mood];
-  const g = grid(22, 22);
-  // Silhouette pleine sauf les yeux (E, H et paupières fermées) laissés transparents.
-  rows.forEach((line, y) => {
-    [...line].forEach((ch, x) => {
-      if (ch === ".") return;
-      const eyeRow = y === 5 || y === 6;
-      const hole = (eyeRow && (ch === "E" || ch === "H")) || (y === 6 && mood === "sleep" && ch === "O" && x > 1 && x < 14);
-      if (!hole) g[y + 1][x + 1] = color;
-    });
-  });
+// ---------- Tray : patte monochrome, pleine (blocage actif) ou en contour (pause) ----------
+// 32 x 32 px, 6 px par pixel de patte : à 16 px (Windows 100 %), 3 px par pixel, net.
+function trayIcon(active, color) {
+  const mask = pawMask(6);
+  const g = grid(32, 32);
+  const filled = (x, y) => mask[y]?.[x] === true;
+  const T = 2; // épaisseur du contour en pause (1 px une fois réduit à 16 px)
+  for (let y = 0; y < 30; y++) {
+    for (let x = 0; x < 30; x++) {
+      if (!filled(x, y)) continue;
+      let inner = true;
+      for (let dy = -T; dy <= T && inner; dy++) {
+        for (let dx = -T; dx <= T; dx++) {
+          if (!filled(x + dx, y + dy)) {
+            inner = false;
+            break;
+          }
+        }
+      }
+      if (active || !inner) g[y + 1][x + 1] = color;
+    }
+  }
   return g;
 }
 
@@ -67,17 +83,16 @@ mkdirSync(join(ICONS, "tray"), { recursive: true });
 writeFileSync(join(ICONS, "app-icon.png"), encodePng(appIcon(), 32));
 
 const TRAY_VARIANTS = {
-  // Barre des tâches / barre de menus claire : chat sombre.
+  // Barre des tâches / barre de menus claire : patte sombre.
   light: rgba("#1f1b24"),
-  // Barre sombre : chat clair.
+  // Barre sombre : patte claire.
   dark: rgba("#f4f1ec"),
   // macOS : image « template », seule l'opacité compte.
   template: rgba("#000000"),
 };
+// Noms de fichiers : « sleep » = blocage actif, « awake » = pause (le chat de l'UI).
 for (const [variant, color] of Object.entries(TRAY_VARIANTS)) {
-  for (const mood of ["sleep", "awake"]) {
-    const g = trayIcon(mood, color);
-    writeFileSync(join(ICONS, "tray", `${mood}-${variant}.png`), encodePng(g, 2));
-  }
+  writeFileSync(join(ICONS, "tray", `sleep-${variant}.png`), encodePng(trayIcon(true, color), 1));
+  writeFileSync(join(ICONS, "tray", `awake-${variant}.png`), encodePng(trayIcon(false, color), 1));
 }
 console.log("icônes générées dans", ICONS);

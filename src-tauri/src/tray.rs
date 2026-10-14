@@ -1,8 +1,8 @@
 //! Icône dans la barre des tâches (Windows, Linux) ou la barre de menus (macOS).
 //!
-//! L'icône montre le chat endormi (protection active) ou éveillé (pause). Elle suit le
-//! thème du système, pas celui de l'app : image « template » sur macOS (le système la
-//! colore), variante claire ou sombre selon la barre des tâches sous Windows.
+//! L'icône est la patte de Pattelock : pleine quand le blocage est actif, en contour en
+//! pause. Elle suit le thème du système, pas celui de l'app : image « template » sur macOS
+//! (le système la colore), variante claire ou sombre selon la barre des tâches sous Windows.
 
 use std::sync::Arc;
 
@@ -27,9 +27,9 @@ pub struct TrayItems {
 /// Variante d'icône à utiliser pour la barre du système.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Variant {
-    /// Barre claire : chat sombre.
+    /// Barre claire : patte sombre.
     Light,
-    /// Barre sombre : chat clair.
+    /// Barre sombre : patte claire.
     Dark,
     /// macOS : seule l'opacité compte.
     Template,
