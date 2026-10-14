@@ -27,9 +27,9 @@ function pawMask(k) {
   });
 }
 
-// ---------- Icône de l'app : disque crème en pixels, patte orange cernée d'encre ----------
+// ---------- Icône de l'app : disque crème en pixels, patte orange pleine ----------
 // Grille de 64 cases (16 px chacune) : la patte occupe la moitié du diamètre, sans toucher
-// le bord. Contour du disque et liseré de la patte font 2 cases.
+// le bord. Le contour du disque fait 2 cases ; la patte n'a pas de liseré, comme au tray.
 function appIcon() {
   const N = 64;
   const g = grid(N, N);
@@ -44,15 +44,9 @@ function appIcon() {
   const K = 6;
   const mask = pawMask(K);
   const o = (N - 5 * K) / 2;
-  const filled = (x, y) => mask[y - o]?.[x - o] === true;
-  const near = (x, y) => {
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (filled(x + dx, y + dy)) return true;
-    return false;
-  };
-  for (let y = o - 2; y < o + 5 * K + 2; y++) {
-    for (let x = o - 2; x < o + 5 * K + 2; x++) {
-      if (filled(x, y)) g[y][x] = ACCENT;
-      else if (near(x, y)) g[y][x] = INK;
+  for (let y = 0; y < 5 * K; y++) {
+    for (let x = 0; x < 5 * K; x++) {
+      if (mask[y][x]) g[y + o][x + o] = ACCENT;
     }
   }
   return g;
