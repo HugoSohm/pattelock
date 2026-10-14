@@ -24,3 +24,6 @@ target/
 # macOS packaging
 /dmg-staging/
 scripts/**/*.app
+
+# Local Claude Code settings
+.claude/
