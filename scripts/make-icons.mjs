@@ -27,64 +27,55 @@ function pawMask(k) {
   });
 }
 
-// ---------- Icône de l'app : tuile crème crantée, grande patte orange cernée d'encre ----------
+// ---------- Icône de l'app : disque crème en pixels, patte orange cernée d'encre ----------
+// Grille de 64 cases (16 px chacune) : la patte occupe la moitié du diamètre, sans toucher
+// le bord. Contour du disque et liseré de la patte font 2 cases.
 function appIcon() {
-  const N = 32;
+  const N = 64;
   const g = grid(N, N);
-  // Tuile x/y 1..30 : contour encre 1 cellule, coins crantés (cellule d'angle vide).
-  for (let y = 1; y <= 30; y++) {
-    for (let x = 1; x <= 30; x++) {
-      const edgeX = x === 1 || x === 30;
-      const edgeY = y === 1 || y === 30;
-      if (edgeX && edgeY) continue;
-      g[y][x] = edgeX || edgeY ? INK : BG;
+  const c = (N - 1) / 2;
+  const inDisc = (x, y, r) => (x - c) ** 2 + (y - c) ** 2 <= r ** 2;
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      if (!inDisc(x, y, N / 2)) continue;
+      g[y][x] = inDisc(x, y, N / 2 - 2) ? BG : INK;
     }
   }
-  // Patte 20 x 20 (4 cellules par pixel), centrée, avec un liseré encre d'une cellule.
-  const mask = pawMask(4);
-  const ox = 6;
-  const oy = 6;
-  const filled = (x, y) => mask[y - oy]?.[x - ox] === true;
-  for (let y = oy - 1; y <= oy + 20; y++) {
-    for (let x = ox - 1; x <= ox + 20; x++) {
+  const K = 6;
+  const mask = pawMask(K);
+  const o = (N - 5 * K) / 2;
+  const filled = (x, y) => mask[y - o]?.[x - o] === true;
+  const near = (x, y) => {
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (filled(x + dx, y + dy)) return true;
+    return false;
+  };
+  for (let y = o - 2; y < o + 5 * K + 2; y++) {
+    for (let x = o - 2; x < o + 5 * K + 2; x++) {
       if (filled(x, y)) g[y][x] = ACCENT;
-      else if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) g[y][x] = INK;
+      else if (near(x, y)) g[y][x] = INK;
     }
   }
   return g;
 }
 
-// ---------- Tray : patte orange cernée d'encre (actif), grise en pause ----------
-// 32 x 32 px, 6 px par pixel de patte et 2 px de liseré : à 16 px (Windows 100 %), 3 px par
-// pixel dont 1 px de liseré, net. Le liseré encre la détache d'une barre claire, la couleur
-// d'une barre sombre : une seule image convient aux deux.
+// ---------- Tray : patte pleine, orange (actif) ou grise (pause) ----------
+// 32 x 32 px, 6 px par pixel de patte : à 16 px (Windows 100 %), chaque doigt reste un
+// carré plein de 3 px. Pas de liseré : à cette taille il mangerait les doigts.
 const LED_OFF = rgba("#b9b3bf");
 
 function trayIcon(fill) {
   const mask = pawMask(6);
   const g = grid(32, 32);
-  const filled = (x, y) => mask[y]?.[x] === true;
-  const T = 2;
   for (let y = 0; y < 30; y++) {
     for (let x = 0; x < 30; x++) {
-      if (!filled(x, y)) continue;
-      let inner = true;
-      for (let dy = -T; dy <= T && inner; dy++) {
-        for (let dx = -T; dx <= T; dx++) {
-          if (!filled(x + dx, y + dy)) {
-            inner = false;
-            break;
-          }
-        }
-      }
-      g[y + 1][x + 1] = inner ? fill : INK;
+      if (mask[y][x]) g[y + 1][x + 1] = fill;
     }
   }
   return g;
 }
 
 mkdirSync(join(ICONS, "tray"), { recursive: true });
-writeFileSync(join(ICONS, "app-icon.png"), encodePng(appIcon(), 32));
+writeFileSync(join(ICONS, "app-icon.png"), encodePng(appIcon(), 16));
 // Comme le badge de l'app : orange quand le blocage est actif, gris en pause.
 writeFileSync(join(ICONS, "tray", "active.png"), encodePng(trayIcon(ACCENT), 1));
 writeFileSync(join(ICONS, "tray", "paused.png"), encodePng(trayIcon(LED_OFF), 1));
