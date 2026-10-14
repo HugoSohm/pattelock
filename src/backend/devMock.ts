@@ -3,7 +3,7 @@
  * sans Tauri. Uniquement chargé en développement : dans l'app, l'état vient du Rust.
  *
  * Paramètres d'URL : ?etat=pause|tout, ?theme=light|dark|system, ?pelage=roux,
- * ?plateforme=macos|linux, ?garde=accessibilite|input|indisponible.
+ * ?plateforme=macos|linux, ?langue=fr|en, ?garde=accessibilite|input|indisponible|partiel.
  */
 
 import { isSkinId } from "../cat/skins.ts";
@@ -18,6 +18,7 @@ export function createMockBackend(): Backend {
   const pelage = params.get("pelage");
   const theme = (params.get("theme") as ThemePref | null) ?? "system";
   const garde = params.get("garde");
+  const langue = params.get("langue");
   const guard: GuardStatus =
     garde === "accessibilite"
       ? { kind: "needsAccessibility" }
@@ -27,8 +28,10 @@ export function createMockBackend(): Backend {
             command: "sudo usermod -aG input $USER && sudo udevadm control --reload-rules",
           }
         : garde === "indisponible"
-          ? { kind: "unavailable", reason: "Aucun clavier détecté." }
-          : { kind: "ok" };
+          ? { kind: "unavailable", reason: "noKeyboard" }
+          : garde === "partiel"
+            ? { kind: "partial", unavailable: ["PrintScreen"] }
+            : { kind: "ok" };
 
   const all: KeyId[] = ["F1", "F2", "F3", "F4", "F6", "F7", "F8", "F9", "F10", "F12"];
   const state: AppState = {
@@ -41,6 +44,7 @@ export function createMockBackend(): Backend {
       theme,
       autostart: true,
       mediaKeys: true,
+      language: langue === "fr" || langue === "en" ? langue : "system",
     },
     total: 1284,
     platform,
@@ -87,6 +91,7 @@ export function createMockBackend(): Backend {
     },
     openAccessibilitySettings: async () => {},
     reportLocalKey: () => {},
+    setUiLanguage: () => {},
     setCatAnchor: () => {},
     minimize: async () => {},
     hide: async () => {},

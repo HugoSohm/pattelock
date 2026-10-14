@@ -8,7 +8,7 @@ Pattelock is a small desktop app built with **Tauri v2**, **Vite** and **TypeScr
 ## 2. Useful Commands
 *   `npm run dev` : Starts the full development environment (Vite + Tauri Dev).
 *   `npm run build` : Builds production-ready bundles for the current platform.
-*   `npm run frontend:dev` : Runs only the Vite frontend with a fake backend (URL parameters: `?etat=pause|tout`, `?vue=reglages`, `?theme=dark`, `?plateforme=macos`).
+*   `npm run frontend:dev` : Runs only the Vite frontend with a fake backend (URL parameters: `?etat=pause|tout`, `?vue=reglages`, `?theme=dark`, `?langue=en`, `?plateforme=macos`).
 *   `npm run icons` : Regenerates the app and tray icons from the cat sprite.
 *   `npm run demo:build` : Regenerates `docs/maquette/anim-demo.html`.
 *   **Frontend Validation & Linting**:
@@ -38,7 +38,7 @@ Pattelock is a small desktop app built with **Tauri v2**, **Vite** and **TypeScr
 *   **Pixel art**: everything moves by frames or by whole sprite pixels, with `steps()` timings. No rotation, blur or sub-pixel movement. Sprites are drawn on canvas with an integer pixel size.
 *   **Sizing**: all CSS is in `rem`, with `html { font-size: calc(100vw / 47.5) }` (1 rem = 16 px at 760 px wide).
 *   **Theming**: colors come from CSS variables in [`tokens.css`](src/styles/tokens.css), with a light and a dark set. Dark is not an inversion: same roles, other values.
-*   **UI language**: the interface is in French. Never use em dashes (« — ») in UI strings.
+*   **UI language**: the interface is in French and English. Every UI string lives in [`src/i18n.ts`](src/i18n.ts), in both languages. The Rust core never sends sentences to the UI: it sends codes (guard status reasons, shortcut errors) that the frontend translates. Only the tray menu is translated in Rust ([`tray.rs`](src-tauri/src/tray.rs)). Never use em dashes (« — ») in UI strings.
 *   **Accessibility**: real `<button>` elements, `aria-pressed` on keys and on the cat, visible focus.
 *   **Code Quality & Formatting (Biome)**: the frontend strictly uses **Biome** (`biome.json`). Always run `npm run lint` or `npm run lint:fix` before finalizing a frontend task.
 

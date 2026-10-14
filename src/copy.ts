@@ -1,4 +1,5 @@
-/** Textes de l'écran principal selon l'état (pas de tiret cadratin dans l'UI). */
+/** Textes de l'écran principal selon l'état, dans la langue courante. */
+import { t } from "./i18n.ts";
 import { shortcutText } from "./keys.ts";
 import type { AppState, KeyId } from "./types.ts";
 
@@ -24,63 +25,55 @@ export function copyFor(s: AppState): Copy {
   if (s.mode === "all") {
     return {
       on: true,
-      tag: "CLAVIER ENTIER VERROUILLÉ",
-      title: "Le chat dort sur tout le clavier",
-      sub: `Toutes les touches sont ignorées, sauf ${sc}. La souris fonctionne toujours.`,
-      hint: `Clique sur le chat ou fais ${sc} pour tout déverrouiller`,
-      catLabel: "Le chat dort sur tout le clavier. Cliquer pour le réveiller et tout déverrouiller.",
+      tag: t("tag.all"),
+      title: t("title.all"),
+      sub: t("sub.all", { sc }),
+      hint: t("hint.all", { sc }),
+      catLabel: t("cat.all"),
       legend: [
-        { swatch: "sw-active", text: "verrouillée" },
-        { swatch: "sw-all", text: `tout le reste du clavier aussi, sauf ${sc}` },
+        { swatch: "sw-active", text: t("state.locked") },
+        { swatch: "sw-all", text: t("legend.allRest", { sc }) },
       ],
     };
   }
   if (s.mode === "fkeys") {
     const n = s.blocked.length;
-    const sub =
-      n === 0
-        ? "Aucune touche n’est choisie, tout le clavier répond normalement."
-        : n === 1
-          ? "1 touche est désactivée en ce moment, le reste du clavier répond normalement."
-          : `${n} touches sont désactivées en ce moment, le reste du clavier répond normalement.`;
     return {
       on: true,
-      tag: "BLOCAGE EN COURS",
-      title: "Le chat dort",
-      sub,
-      hint: "Clique sur le chat pour le réveiller",
-      catLabel: "Le chat dort, blocage en cours. Cliquer pour le réveiller.",
+      tag: t("tag.fkeys"),
+      title: t("title.fkeys"),
+      sub: n === 0 ? t("sub.fkeys.zero") : n === 1 ? t("sub.fkeys.one") : t("sub.fkeys.many", { n }),
+      hint: t("hint.fkeys"),
+      catLabel: t("cat.fkeys"),
       legend: [
-        { swatch: "sw-active", text: "bloquée en ce moment" },
-        { swatch: "sw-free", text: "libre" },
+        { swatch: "sw-active", text: t("state.blocked") },
+        { swatch: "sw-free", text: t("state.free") },
       ],
     };
   }
   return {
     on: false,
-    tag: "EN PAUSE, RIEN N’EST BLOQUÉ",
-    title: "Le chat est réveillé",
-    sub: "Clavier libre, toutes les touches répondent.",
-    hint: "Clique sur le chat pour l’endormir",
-    catLabel: "Le chat est réveillé, protection en pause. Cliquer pour l’endormir.",
+    tag: t("tag.off"),
+    title: t("title.off"),
+    sub: t("sub.off"),
+    hint: t("hint.off"),
+    catLabel: t("cat.off"),
     legend: [
-      { swatch: "sw-planned", text: "prévue, pas encore bloquée" },
-      { swatch: "sw-free", text: "libre" },
+      { swatch: "sw-planned", text: t("state.planned") },
+      { swatch: "sw-free", text: t("state.free") },
     ],
   };
 }
 
 export function keyVisual(s: AppState, id: KeyId): [KeyVisual, string] {
   const blocked = s.blocked.includes(id);
-  if (s.mode === "all") return ["s-active", "verrouillée avec tout le clavier"];
-  if (s.mode === "fkeys" && blocked) return ["s-active", "bloquée en ce moment"];
-  if (blocked) return ["s-planned", "prévue, pas encore bloquée"];
-  return ["s-free", "libre"];
+  if (s.mode === "all") return ["s-active", t("state.lockedAll")];
+  if (s.mode === "fkeys" && blocked) return ["s-active", t("state.blocked")];
+  if (blocked) return ["s-planned", t("state.planned")];
+  return ["s-free", t("state.free")];
 }
 
-const NUMBER = new Intl.NumberFormat("fr-FR");
-
-/** « 1 284 » avec espace fine insécable. */
-export function formatCount(n: number): string {
-  return NUMBER.format(n);
+/** « coup de patte évité » ou « coups de patte évités ». */
+export function counterText(n: number): string {
+  return n <= 1 ? t("counter.one") : t("counter.many");
 }

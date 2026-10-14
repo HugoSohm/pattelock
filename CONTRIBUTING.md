@@ -45,7 +45,7 @@ Pull requests run the same checks in CI, on Windows, macOS and Linux:
 - **Frontend**: [Biome](https://biomejs.dev/) formats and lints `src/` (`npm run lint:fix`). TypeScript runs in strict mode.
 - **Rust**: `cargo fmt` and `cargo clippy` with no warnings, on every OS. Code that only exists on one OS must not leave dead code on the others.
 - **Pixel art**: the cat only moves by whole pixels. Animations change frames or shift by whole sprite pixels, never rotate, blur or use sub-pixel positions.
-- **UI text**: the interface is in French. Do not use em dashes in UI strings.
+- **UI text**: the interface is in French and English. Add every new string to both languages in [`src/i18n.ts`](src/i18n.ts) (and to the tray menu in `src-tauri/src/tray.rs` if needed). Do not use em dashes in UI strings.
 - Keep modules small and add comments where logic is complex, especially in the keyboard hooks.
 
 ### Adding a Cat Coat

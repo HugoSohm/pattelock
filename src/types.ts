@@ -1,5 +1,6 @@
 /** Types partagés avec le Rust (sérialisés en camelCase). */
 import type { SkinId } from "./cat/skins.ts";
+import type { LangPref } from "./i18n.ts";
 
 /** Off : rien n'est bloqué. FKeys : les touches choisies. All : tout le clavier. */
 export type Mode = "off" | "fkeys" | "all";
@@ -37,14 +38,36 @@ export interface Shortcut {
 export type ThemePref = "system" | "light" | "dark";
 export type Platform = "windows" | "macos" | "linux";
 
+/** Pourquoi le blocage est impossible (traduit par le front). */
+export type UnavailableReason =
+  | "unsupported"
+  | "alreadyInstalled"
+  | "hookRefused"
+  | "threadFailed"
+  | "tapRefused"
+  | "runLoop"
+  | "x11Lost"
+  | "keyboardBusy"
+  | "uinputFailed"
+  | "noKeyboard";
+
 /** État du blocage côté OS. */
 export type GuardStatus =
   | { kind: "ok" }
   | { kind: "starting" }
   | { kind: "needsAccessibility" }
   | { kind: "needsInputGroup"; command: string }
-  | { kind: "unavailable"; reason: string }
-  | { kind: "partial"; unavailable: KeyId[]; reason: string };
+  | { kind: "unavailable"; reason: UnavailableReason; detail?: string }
+  | { kind: "partial"; unavailable: KeyId[] };
+
+/** Raisons d'un refus de raccourci (renvoyées par le Rust, traduites par le front). */
+export type ShortcutErrorCode =
+  | "missingKey"
+  | "missingModifier"
+  | "blockable"
+  | "unsupported"
+  | "taken"
+  | "refused";
 
 export interface Settings {
   skin: SkinId;
@@ -52,6 +75,7 @@ export interface Settings {
   theme: ThemePref;
   autostart: boolean;
   mediaKeys: boolean;
+  language: LangPref;
 }
 
 export interface AppState {

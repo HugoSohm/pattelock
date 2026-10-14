@@ -22,6 +22,36 @@ pub enum ThemePref {
     Dark,
 }
 
+/// Langue choisie dans les Réglages (« system » : celle de l'OS).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum LanguagePref {
+    #[default]
+    System,
+    Fr,
+    En,
+}
+
+impl LanguagePref {
+    /// Langue imposée par le réglage, ou `None` en mode « system » (l'UI la détermine).
+    pub fn fixed(self) -> Option<Lang> {
+        match self {
+            Self::System => None,
+            Self::Fr => Some(Lang::Fr),
+            Self::En => Some(Lang::En),
+        }
+    }
+}
+
+/// Langue réellement affichée.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Lang {
+    #[default]
+    Fr,
+    En,
+}
+
 /// Tout ce qui est persisté, sauf le compteur (écrit à part, de façon groupée).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(default, rename_all = "camelCase")]
@@ -37,6 +67,7 @@ pub struct Prefs {
     pub autostart: bool,
     /// macOS : bloquer aussi les fonctions média de la rangée du haut.
     pub media_keys: bool,
+    pub language: LanguagePref,
 }
 
 impl Default for Prefs {
@@ -50,6 +81,7 @@ impl Default for Prefs {
             theme: ThemePref::System,
             autostart: false,
             media_keys: true,
+            language: LanguagePref::System,
         }
     }
 }
@@ -100,6 +132,7 @@ pub struct SettingsPatch {
     pub theme: Option<ThemePref>,
     pub autostart: Option<bool>,
     pub media_keys: Option<bool>,
+    pub language: Option<LanguagePref>,
 }
 
 impl SettingsPatch {
@@ -119,6 +152,9 @@ impl SettingsPatch {
         }
         if let Some(m) = self.media_keys {
             p.media_keys = m;
+        }
+        if let Some(l) = self.language {
+            p.language = l;
         }
     }
 }
@@ -153,11 +189,13 @@ mod tests {
             accent: "#8fb0ff".into(),
             theme: ThemePref::Dark,
             autostart: true,
+            language: LanguagePref::En,
             ..Prefs::default()
         };
         p.shortcut.shift = true;
         let v = serde_json::to_value(&p).unwrap();
         assert_eq!(v["mediaKeys"], json!(true));
+        assert_eq!(v["language"], json!("en"));
         assert_eq!(Prefs::from_json(Some(&v)), p);
     }
 

@@ -70,16 +70,63 @@ pub enum GuardStatus {
     NeedsInputGroup {
         command: String,
     },
-    /// Blocage impossible (raison lisible).
+    /// Blocage impossible. Le front traduit la raison ; `detail` donne l'erreur système.
     Unavailable {
-        reason: String,
+        reason: Reason,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        detail: Option<String>,
     },
     /// Certaines touches n'ont pas pu être bloquées (déjà prises par le système).
     #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Partial {
         unavailable: Vec<BlockableKey>,
-        reason: String,
     },
+}
+
+/// Pourquoi le blocage est impossible (codes traduits par le front).
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum Reason {
+    #[cfg_attr(
+        any(windows, target_os = "macos", target_os = "linux"),
+        allow(dead_code)
+    )]
+    Unsupported,
+    #[cfg_attr(not(windows), allow(dead_code))]
+    AlreadyInstalled,
+    #[cfg_attr(not(windows), allow(dead_code))]
+    HookRefused,
+    #[cfg_attr(target_os = "linux", allow(dead_code))]
+    ThreadFailed,
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    TapRefused,
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    RunLoop,
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    X11Lost,
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    KeyboardBusy,
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    UinputFailed,
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    NoKeyboard,
+}
+
+impl GuardStatus {
+    pub fn unavailable(reason: Reason) -> Self {
+        Self::Unavailable {
+            reason,
+            detail: None,
+        }
+    }
+
+    #[cfg_attr(target_os = "linux", allow(dead_code))]
+    pub fn unavailable_with(reason: Reason, detail: impl std::fmt::Display) -> Self {
+        Self::Unavailable {
+            reason,
+            detail: Some(detail.to_string()),
+        }
+    }
 }
 
 /// État partagé entre l'app et le hook.
@@ -211,9 +258,7 @@ struct Unsupported;
 
 impl KeyGuard for Unsupported {
     fn status(&self) -> GuardStatus {
-        GuardStatus::Unavailable {
-            reason: "Le blocage des touches n’est pas disponible sur ce système.".into(),
-        }
+        GuardStatus::unavailable(Reason::Unsupported)
     }
 }
 
@@ -261,5 +306,27 @@ mod tests {
         );
         let v = serde_json::to_value(GuardStatus::Ok).unwrap();
         assert_eq!(v, serde_json::json!({"kind": "ok"}));
+        let v = serde_json::to_value(GuardStatus::unavailable(Reason::X11Lost)).unwrap();
+        assert_eq!(
+            v,
+            serde_json::json!({"kind": "unavailable", "reason": "x11Lost"})
+        );
+        let v = serde_json::to_value(GuardStatus::unavailable_with(
+            Reason::HookRefused,
+            "accès refusé",
+        ))
+        .unwrap();
+        assert_eq!(
+            v,
+            serde_json::json!({"kind": "unavailable", "reason": "hookRefused", "detail": "accès refusé"})
+        );
+        let v = serde_json::to_value(GuardStatus::Partial {
+            unavailable: vec![BlockableKey::PrintScreen],
+        })
+        .unwrap();
+        assert_eq!(
+            v,
+            serde_json::json!({"kind": "partial", "unavailable": ["PrintScreen"]})
+        );
     }
 }

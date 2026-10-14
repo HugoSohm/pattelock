@@ -1,3 +1,4 @@
+import type { Lang } from "../i18n.ts";
 import type { AppState, KeyId, KeyIntercepted, Settings, Shortcut } from "../types.ts";
 
 /** Tout ce que l'UI demande au cœur de l'app (le Rust). L'état fait foi côté Rust. */
@@ -28,6 +29,8 @@ export interface Backend {
 
   updateSettings(patch: Partial<Settings>): Promise<void>;
   openAccessibilitySettings(): Promise<void>;
+  /** Langue réellement affichée, pour traduire le menu du tray. */
+  setUiLanguage(lang: Lang): void;
   /** Touche avalée dans la fenêtre de l'app elle-même (compteur). */
   reportLocalKey(key: string): void;
   /** Indique où se trouve le chat dans la fenêtre (pour le suivi du curseur global). */

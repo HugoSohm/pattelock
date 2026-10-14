@@ -1,4 +1,6 @@
-import type { GuardStatus, Platform } from "../types.ts";
+import { t } from "../i18n.ts";
+import { keyGroups } from "../keys.ts";
+import type { GuardStatus, Platform, ShortcutErrorCode } from "../types.ts";
 import { h } from "./dom.ts";
 import { paw } from "./icons.ts";
 
@@ -18,25 +20,21 @@ export function createNoticeView(onOpenSettings: () => void, onRetry: () => void
   let action: () => void = () => {};
   primary.addEventListener("click", () => action());
 
-  function update(guard: GuardStatus, platform: Platform): boolean {
+  function update(guard: GuardStatus): boolean {
     if (guard.kind === "needsAccessibility") {
-      title.textContent = "Pattelock a besoin de l’Accessibilité";
-      text.textContent =
-        platform === "macos"
-          ? "Pour bloquer des touches, macOS doit autoriser Pattelock dans Réglages Système, Confidentialité et sécurité, Accessibilité. Coche Pattelock dans la liste, puis reviens ici."
-          : "Pattelock n’a pas l’autorisation de lire le clavier.";
+      title.textContent = t("notice.ax.title");
+      text.textContent = t("notice.ax.text");
       code.hidden = true;
-      primary.textContent = "Ouvrir les Réglages Système";
+      primary.textContent = t("notice.ax.button");
       action = onOpenSettings;
       return true;
     }
     if (guard.kind === "needsInputGroup") {
-      title.textContent = "Accès au clavier nécessaire";
-      text.textContent =
-        "Sous Wayland, Pattelock passe par /dev/input et /dev/uinput. Lance cette commande dans un terminal, puis ferme ta session et reconnecte-toi :";
+      title.textContent = t("notice.input.title");
+      text.textContent = t("notice.input.text");
       code.hidden = false;
       code.textContent = guard.command;
-      primary.textContent = "Réessayer";
+      primary.textContent = t("notice.input.button");
       action = onRetry;
       return true;
     }
@@ -46,9 +44,26 @@ export function createNoticeView(onOpenSettings: () => void, onRetry: () => void
   return { el, update };
 }
 
-/** Bandeau discret sous l'indice quand le blocage est partiel ou impossible. */
-export function guardBanner(guard: GuardStatus): string | null {
-  if (guard.kind === "unavailable") return guard.reason;
-  if (guard.kind === "partial") return guard.reason;
+/** Bandeau discret sous le compteur quand le blocage est partiel ou impossible. */
+export function guardBanner(guard: GuardStatus, platform: Platform): string | null {
+  if (guard.kind === "unavailable") {
+    const reason = t(`reason.${guard.reason}`);
+    return guard.detail ? `${reason} (${guard.detail})` : reason;
+  }
+  if (guard.kind === "partial") {
+    const names = new Map(keyGroups(platform).flatMap((g) => g.map((k) => [k.id, k.name] as const)));
+    const keys = guard.unavailable.map((k) => names.get(k) ?? k).join(", ");
+    return t("reason.partial", { keys });
+  }
   return null;
+}
+
+/** Message d'erreur du raccourci, dans la langue courante. */
+export function shortcutErrorText(code: ShortcutErrorCode, platform: Platform): string {
+  if (code === "missingModifier") {
+    const or = t("error.or");
+    const mods = platform === "macos" ? `Ctrl, Option ${or} Cmd` : `Ctrl ${or} Alt`;
+    return t("error.missingModifier", { mods });
+  }
+  return t(`error.${code}`);
 }

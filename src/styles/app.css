@@ -129,9 +129,9 @@ canvas {
 .winbtns button:hover {
   color: var(--ink);
 }
-.ico-dots {
-  width: 0.875rem;
-  height: 0.25rem;
+.ico-gear {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 .ico-min,
 .ico-close {
@@ -463,7 +463,7 @@ kbd {
   padding: 1.625rem 2rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.625rem;
+  gap: 1.375rem;
 }
 .section {
   display: flex;
@@ -590,6 +590,28 @@ kbd {
   width: 1rem;
   height: 1rem;
   background: var(--bg);
+}
+/* Ligne « Langue » : même allure qu'une option, avec un petit sélecteur segmenté. */
+.opt-row {
+  cursor: default;
+}
+.langs {
+  display: flex;
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  box-shadow: var(--notch3);
+}
+.lg {
+  height: 1.5rem;
+  padding: 0 0.625rem;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.lg[aria-checked="true"] {
+  background: var(--ink);
+  color: var(--bg);
 }
 .opt[aria-checked="true"] .sw2 {
   background: var(--accent);

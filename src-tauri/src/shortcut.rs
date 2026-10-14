@@ -59,21 +59,14 @@ pub enum ShortcutError {
 }
 
 impl ShortcutError {
-    /// Message affiché dans l'UI.
-    pub fn message(&self) -> String {
-        let mods = if cfg!(target_os = "macos") {
-            "Ctrl, Option ou Cmd"
-        } else {
-            "Ctrl ou Alt"
-        };
+    /// Code envoyé au front, qui affiche le message dans la langue de l'UI.
+    pub fn code(&self) -> &'static str {
         match self {
-            Self::MissingKey => "Ajoute une touche aux modificateurs.".into(),
-            Self::MissingModifier => {
-                format!("Ajoute {mods} : une touche seule pourrait être pressée par le chat.")
-            }
-            Self::Blockable => "Cette touche peut être bloquée, choisis-en une autre.".into(),
-            Self::Unsupported => "Cette touche n’est pas prise en charge.".into(),
-            Self::Taken => "Cette combinaison est déjà prise par le système.".into(),
+            Self::MissingKey => "missingKey",
+            Self::MissingModifier => "missingModifier",
+            Self::Blockable => "blockable",
+            Self::Unsupported => "unsupported",
+            Self::Taken => "taken",
         }
     }
 }
@@ -258,6 +251,12 @@ mod tests {
         s.key = "Digit2".into();
         s.label = Some("É".into());
         assert_eq!(s.plugin_key(false), "Digit2");
+    }
+
+    #[test]
+    fn error_codes_match_front() {
+        assert_eq!(ShortcutError::MissingModifier.code(), "missingModifier");
+        assert_eq!(ShortcutError::Taken.code(), "taken");
     }
 
     #[test]

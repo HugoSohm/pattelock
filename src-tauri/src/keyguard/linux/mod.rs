@@ -11,7 +11,7 @@ mod x11;
 
 use std::sync::Arc;
 
-use super::{GuardStatus, KeyGuard, Shared};
+use super::{GuardStatus, KeyGuard, Reason, Shared};
 
 /// Type de session graphique.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,13 +51,14 @@ pub fn start(shared: Arc<Shared>) -> Box<dyn KeyGuard> {
     }
 }
 
-/// Blocage impossible, avec une raison lisible.
-struct Unavailable(String);
+/// Blocage impossible.
+struct Unavailable(Reason, String);
 
 impl KeyGuard for Unavailable {
     fn status(&self) -> GuardStatus {
         GuardStatus::Unavailable {
-            reason: self.0.clone(),
+            reason: self.0,
+            detail: Some(self.1.clone()),
         }
     }
 }

@@ -44,6 +44,7 @@ pub fn run() {
             let core = Core::start(&handle)?;
             let theme = core.prefs().theme;
             let mode = core.mode();
+            let lang = core.lang();
             app.manage(core);
             app.state::<CursorFollow>().start(handle.clone());
 
@@ -52,7 +53,7 @@ pub fn run() {
                 window::keep_hidden();
             }
             window::create_main(&handle, theme)?;
-            tray::create(&handle, mode)?;
+            tray::create(&handle, mode, lang)?;
             // Filet de sécurité : la fenêtre s'affiche même si le front ne répond pas.
             std::thread::spawn(move || {
                 std::thread::sleep(SHOW_FALLBACK);
@@ -73,7 +74,7 @@ pub fn run() {
                 // L'icône du tray suit le thème du système.
                 WindowEvent::ThemeChanged(_) => {
                     if let Some(core) = win.try_state::<Arc<Core>>() {
-                        tray::refresh(win.app_handle(), core.mode());
+                        tray::refresh(win.app_handle(), core.mode(), core.lang());
                     }
                 }
                 _ => {}
@@ -90,6 +91,7 @@ pub fn run() {
             commands::end_shortcut_capture,
             commands::open_accessibility_settings,
             commands::report_local_key,
+            commands::set_ui_language,
             commands::set_cat_anchor,
             commands::ui_ready,
             commands::hide_window,

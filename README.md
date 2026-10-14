@@ -28,6 +28,7 @@
 - ⌨️ **Global shortcut**: `Ctrl + Alt + K` (`Cmd + Option + K` on macOS) toggles protection from anywhere. Change it with one click.
 - 📊 **Paw counter**: counts every keystroke your cat didn't get to send, since installation.
 - 🎨 **Animated pixel cat**: it breathes and snores while asleep, and follows your cursor with its eyes when awake. Five coats, four accent colors, light, dark or system theme.
+- 🌍 **English & French**: follows your system language, or pick one in the settings.
 - 🗂️ **Lives in the tray**: closing the window keeps Pattelock running in the taskbar or menu bar, and it can start with your session.
 - 🔒 **100% local**: no network calls, no telemetry. Settings and the counter stay on your machine.
 
@@ -108,7 +109,7 @@ npm run dev
 > [!NOTE]
 > Key blocking is live in development too. If you lock the whole keyboard, `Ctrl + Alt + K` or a click on the cat gets you out, and stopping the dev server removes the hook.
 
-To work on the interface only, without Rust, run `npm run frontend:dev` and open http://localhost:1420. A fake backend replaces the app core, and URL parameters force a state: `?etat=pause`, `?etat=tout`, `?vue=reglages`, `?theme=dark`, `?plateforme=macos`. All cat animations are shown at http://localhost:1420/anim-demo.html.
+To work on the interface only, without Rust, run `npm run frontend:dev` and open http://localhost:1420. A fake backend replaces the app core, and URL parameters force a state: `?etat=pause`, `?etat=tout`, `?vue=reglages`, `?theme=dark`, `?langue=en`, `?plateforme=macos`. All cat animations are shown at http://localhost:1420/anim-demo.html.
 
 ---
 

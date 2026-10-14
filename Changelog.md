@@ -10,3 +10,4 @@ First release.
 - Counter of paw strikes avoided.
 - Animated pixel art cat, 5 coats, 4 accent colors, light, dark and system themes.
 - Tray icon in the taskbar or menu bar, and launch at startup.
+- Available in English and French, following your system language by default.

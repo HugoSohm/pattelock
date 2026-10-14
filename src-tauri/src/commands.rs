@@ -7,7 +7,7 @@ use tauri::{AppHandle, State};
 use crate::core::{AppState, Core};
 use crate::cursor::CursorFollow;
 use crate::keyguard::keys::BlockableKey;
-use crate::settings::SettingsPatch;
+use crate::settings::{Lang, SettingsPatch};
 use crate::shortcut::Shortcut;
 use crate::state::Action;
 
@@ -38,10 +38,17 @@ pub fn update_settings(core: CoreState<'_>, patch: SettingsPatch) {
     core.update_settings(patch);
 }
 
-/// Rejette avec un message lisible si la combinaison est refusée.
+/// Rejette avec un code (`taken`, `blockable`...) si la combinaison est refusée.
 #[tauri::command]
 pub fn set_shortcut(core: CoreState<'_>, shortcut: Shortcut) -> Result<(), String> {
-    core.set_shortcut(shortcut).map_err(|e| e.message())
+    core.set_shortcut(shortcut)
+        .map_err(|e| e.code().to_string())
+}
+
+/// Langue réellement affichée par l'UI (pour le menu du tray).
+#[tauri::command]
+pub fn set_ui_language(core: CoreState<'_>, lang: Lang) {
+    core.set_ui_language(lang);
 }
 
 #[tauri::command]

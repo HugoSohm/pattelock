@@ -17,7 +17,8 @@ use crate::counter::{Counter, Throttle};
 use crate::keyguard::keys::{mask_of, BlockableKey};
 use crate::keyguard::{self, GuardEvent, GuardMode, GuardStatus, KeyGuard, Shared};
 use crate::settings::{
-    total_from_json, Prefs, SettingsPatch, ThemePref, PREFS_KEY, STORE_FILE, TOTAL_KEY,
+    total_from_json, Lang, LanguagePref, Prefs, SettingsPatch, ThemePref, PREFS_KEY, STORE_FILE,
+    TOTAL_KEY,
 };
 use crate::shortcut::{Shortcut, ShortcutError};
 use crate::state::{next_mode, persisted_active, startup_mode, Action, Mode};
@@ -47,6 +48,7 @@ pub struct SettingsView {
     pub theme: ThemePref,
     pub autostart: bool,
     pub media_keys: bool,
+    pub language: LanguagePref,
 }
 
 #[derive(Serialize, Clone)]
@@ -66,6 +68,8 @@ pub const PLATFORM: &str = if cfg!(target_os = "macos") {
 struct Inner {
     mode: Mode,
     prefs: Prefs,
+    /// Langue affichée par l'UI (pour le tray).
+    lang: Lang,
 }
 
 pub struct Core {
@@ -107,14 +111,16 @@ impl Core {
         let uses_plugin = !guard.detects_shortcut();
         if uses_plugin {
             if let Err(e) = crate::hotkey::register(app, &prefs.shortcut) {
-                log::warn!("raccourci global inactif : {}", e.message());
+                log::warn!("raccourci global inactif : {}", e.code());
             }
         }
 
+        // En mode « system », l'UI corrige la langue dès qu'elle a démarré.
+        let lang = prefs.language.fixed().unwrap_or_default();
         let core = Arc::new(Core {
             app: app.clone(),
             store,
-            inner: Mutex::new(Inner { mode, prefs }),
+            inner: Mutex::new(Inner { mode, prefs, lang }),
             shared,
             guard,
             uses_plugin,
@@ -142,6 +148,7 @@ impl Core {
                 theme: p.theme,
                 autostart: p.autostart,
                 media_keys: p.media_keys,
+                language: p.language,
             },
             total: self.counter.total(),
             platform: PLATFORM,
@@ -155,6 +162,22 @@ impl Core {
 
     pub fn prefs(&self) -> Prefs {
         self.lock().prefs.clone()
+    }
+
+    pub fn lang(&self) -> Lang {
+        self.lock().lang
+    }
+
+    pub fn set_ui_language(&self, lang: Lang) {
+        let mode = {
+            let mut inner = self.lock();
+            if inner.lang == lang {
+                return;
+            }
+            inner.lang = lang;
+            inner.mode
+        };
+        crate::tray::refresh(&self.app, mode, lang);
     }
 
     pub fn act(&self, action: Action) {
@@ -224,7 +247,7 @@ impl Core {
         self.shared.set_capturing(false);
         if self.uses_plugin {
             if let Err(e) = crate::hotkey::register(&self.app, &self.prefs().shortcut) {
-                log::warn!("raccourci global inactif : {}", e.message());
+                log::warn!("raccourci global inactif : {}", e.code());
             }
         }
     }
@@ -271,7 +294,7 @@ impl Core {
 
     pub fn emit_state(&self) {
         let state = self.snapshot();
-        crate::tray::refresh(&self.app, state.mode);
+        crate::tray::refresh(&self.app, state.mode, self.lang());
         if let Err(e) = self.app.emit(EV_STATE, state) {
             log::warn!("événement {EV_STATE} non envoyé : {e}");
         }

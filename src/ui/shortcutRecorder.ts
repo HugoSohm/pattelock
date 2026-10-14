@@ -1,5 +1,5 @@
-import { BLOCKABLE_CODES, codeLabel, MODIFIER_CODES } from "../keys.ts";
-import type { Shortcut } from "../types.ts";
+import { BLOCKABLE_CODES, MODIFIER_CODES } from "../keys.ts";
+import type { Shortcut, ShortcutErrorCode } from "../types.ts";
 
 export interface RecorderHandlers {
   /** Enregistre la combinaison ; rejette avec un message si elle est refusée. */
@@ -7,7 +7,7 @@ export interface RecorderHandlers {
   begin(): Promise<void>;
   end(): Promise<void>;
   /** L'état d'enregistrement ou le message d'erreur a changé. */
-  changed(recording: boolean, error: string | null): void;
+  changed(recording: boolean, error: ShortcutErrorCode | null): void;
 }
 
 /** « Changer » : enregistre la prochaine combinaison pressée dans la fenêtre. */
@@ -37,13 +37,13 @@ export class ShortcutRecorder {
     await this.h.begin().catch(() => {});
   }
 
-  private async stop(error: string | null): Promise<void> {
+  private async stop(error: ShortcutErrorCode | null): Promise<void> {
     this.recording = false;
     this.setError(error);
     await this.h.end().catch(() => {});
   }
 
-  private setError(error: string | null): void {
+  private setError(error: ShortcutErrorCode | null): void {
     window.clearTimeout(this.errorTimer);
     this.h.changed(this.recording, error);
     if (error) {
@@ -61,21 +61,35 @@ export class ShortcutRecorder {
       return;
     }
     if (BLOCKABLE_CODES.has(e.code)) {
-      void this.stop("Cette touche peut être bloquée, choisis-en une autre.");
+      void this.stop("blockable");
       return;
     }
-    const label = e.key.length === 1 && e.key.trim() ? e.key.toUpperCase() : codeLabel(e.code);
     const shortcut: Shortcut = {
       ctrl: e.ctrlKey,
       alt: e.altKey,
       shift: e.shiftKey,
       meta: e.metaKey,
       key: e.code,
-      label,
     };
+    // Caractère imprimé sur la touche (A sur la position Q d'un AZERTY). Les autres
+    // touches (Espace, flèches...) sont nommées à l'affichage, dans la langue courante.
+    if (e.key.length === 1 && e.key.trim()) shortcut.label = e.key.toUpperCase();
     void this.h
       .save(shortcut)
       .then(() => this.stop(null))
-      .catch((err: unknown) => this.stop(typeof err === "string" ? err : "Combinaison refusée."));
+      .catch((err: unknown) => this.stop(isErrorCode(err) ? err : "refused"));
   }
+}
+
+const ERROR_CODES: readonly ShortcutErrorCode[] = [
+  "missingKey",
+  "missingModifier",
+  "blockable",
+  "unsupported",
+  "taken",
+  "refused",
+];
+
+function isErrorCode(v: unknown): v is ShortcutErrorCode {
+  return typeof v === "string" && (ERROR_CODES as readonly string[]).includes(v);
 }

@@ -1,20 +1,24 @@
 import { SpriteCanvas } from "../cat/render.ts";
 import { SKINS, type SkinId } from "../cat/skins.ts";
 import { FRAMES } from "../cat/sprite.ts";
+import { type LangPref, t } from "../i18n.ts";
 import type { AppState, Settings, ThemePref } from "../types.ts";
-import { h, rovingRadios, syncRadios } from "./dom.ts";
+import { h, rovingRadios, setText, syncRadios } from "./dom.ts";
 
 export const ACCENTS = [
-  { color: "#ff9548", name: "Orange" },
-  { color: "#f4a3b4", name: "Rose" },
-  { color: "#7fd1a8", name: "Menthe" },
-  { color: "#8fb0ff", name: "Bleu" },
+  { color: "#ff9548", name: "accent.orange" },
+  { color: "#f4a3b4", name: "accent.rose" },
+  { color: "#7fd1a8", name: "accent.menthe" },
+  { color: "#8fb0ff", name: "accent.bleu" },
 ] as const;
 
-const THEMES: { id: ThemePref; name: string }[] = [
-  { id: "system", name: "Système" },
-  { id: "light", name: "Clair" },
-  { id: "dark", name: "Sombre" },
+const THEMES: ThemePref[] = ["system", "light", "dark"];
+
+/** Les noms de langue restent dans leur propre langue, quelle que soit celle de l'UI. */
+const LANGUAGES: { id: LangPref; name: string | null }[] = [
+  { id: "system", name: null },
+  { id: "fr", name: "Français" },
+  { id: "en", name: "English" },
 ];
 
 export interface SettingsView {
@@ -25,25 +29,30 @@ export interface SettingsView {
 }
 
 export function createSettingsView(onChange: (patch: Partial<Settings>) => void): SettingsView {
-  const section = (label: string, id: string, control: HTMLElement) =>
-    h("section", { class: "section" }, h("h2", { class: "lbl", text: label, attrs: { id } }), control);
+  const labels: { el: HTMLElement; update(): void }[] = [];
+  const section = (label: Parameters<typeof t>[0], id: string, control: HTMLElement) => {
+    const title = h("h2", { class: "lbl", attrs: { id } });
+    labels.push({ el: title, update: () => setText(title, t(label)) });
+    return h("section", { class: "section" }, title, control);
+  };
 
   // Pelages
   const furs = h("div", {
     class: "furs",
     attrs: { role: "radiogroup", "aria-labelledby": "lbl-fur" },
   });
-  const thumbs: { id: SkinId; btn: HTMLButtonElement; canvas: SpriteCanvas }[] = [];
+  const thumbs: { id: SkinId; btn: HTMLButtonElement; canvas: SpriteCanvas; name: HTMLElement }[] = [];
   for (const skin of SKINS) {
     const canvas = new SpriteCanvas(4);
+    const name = h("span");
     const btn = h(
       "button",
       { class: "fur", attrs: { type: "button", role: "radio", "aria-checked": "false" } },
       canvas.el,
-      h("span", { text: skin.name }),
+      name,
     );
     btn.addEventListener("click", () => onChange({ skin: skin.id }));
-    thumbs.push({ id: skin.id, btn, canvas });
+    thumbs.push({ id: skin.id, btn, canvas, name });
     furs.append(btn);
   }
   rovingRadios(furs);
@@ -58,15 +67,12 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
     swatch.style.background = a.color;
     const b = h(
       "button",
-      {
-        class: "acc",
-        attrs: { type: "button", role: "radio", "aria-label": a.name, "aria-checked": "false" },
-      },
+      { class: "acc", attrs: { type: "button", role: "radio", "aria-checked": "false" } },
       swatch,
     );
     b.addEventListener("click", () => onChange({ accent: a.color }));
     accs.append(b);
-    return { color: a.color, b };
+    return { ...a, b };
   });
   rovingRadios(accs);
 
@@ -75,65 +81,102 @@ export function createSettingsView(onChange: (patch: Partial<Settings>) => void)
     class: "themes",
     attrs: { role: "radiogroup", "aria-labelledby": "lbl-theme" },
   });
-  const themeBtns = THEMES.map((t) => {
+  const themeBtns = THEMES.map((id) => {
+    const name = h("span");
     const b = h(
       "button",
-      {
-        class: `th th-${t.id}`,
-        attrs: { type: "button", role: "radio", "aria-checked": "false" },
-      },
+      { class: `th th-${id}`, attrs: { type: "button", role: "radio", "aria-checked": "false" } },
       h("i", { attrs: { "aria-hidden": "true" } }),
-      t.name,
+      name,
     );
-    b.addEventListener("click", () => onChange({ theme: t.id }));
+    b.addEventListener("click", () => onChange({ theme: id }));
     themes.append(b);
-    return { id: t.id, b };
+    return { id, b, name };
   });
   rovingRadios(themes);
 
-  // Options
-  const option = (label: string, key: "autostart" | "mediaKeys") => {
+  // Langue : une ligne de la liste d'options, avec un petit sélecteur segmenté.
+  const langLabel = h("span", { attrs: { id: "lbl-lang" } });
+  const langs = h("div", {
+    class: "langs",
+    attrs: { role: "radiogroup", "aria-labelledby": "lbl-lang" },
+  });
+  const langBtns = LANGUAGES.map((l) => {
+    const b = h("button", {
+      class: "lg",
+      attrs: { type: "button", role: "radio", "aria-checked": "false" },
+    });
+    if (l.name) {
+      b.textContent = l.name;
+      b.lang = l.id;
+    }
+    b.addEventListener("click", () => onChange({ language: l.id }));
+    langs.append(b);
+    return { ...l, b };
+  });
+  rovingRadios(langs);
+  const langRow = h("div", { class: "opt opt-row" }, langLabel, langs);
+
+  // Interrupteurs
+  const option = (key: "autostart" | "mediaKeys") => {
+    const label = h("span");
     const b = h(
       "button",
       { class: "opt", attrs: { type: "button", role: "switch", "aria-checked": "false" } },
-      h("span", { text: label }),
+      label,
       h("span", { class: "sw2", attrs: { "aria-hidden": "true" } }, h("span")),
     );
     b.addEventListener("click", () =>
       onChange({ [key]: b.getAttribute("aria-checked") !== "true" } as Partial<Settings>),
     );
-    return b;
+    return { b, label };
   };
-  const autostart = option("Lancer Pattelock au démarrage", "autostart");
-  const media = option("Bloquer aussi les fonctions média de la rangée du haut (Mac)", "mediaKeys");
+  const autostart = option("autostart");
+  const media = option("mediaKeys");
 
   const el = h(
     "div",
     { class: "settings" },
-    section("PELAGE DU CHAT", "lbl-fur", furs),
-    section("COULEUR D’ACCENT", "lbl-accent", accs),
-    section("THÈME", "lbl-theme", themes),
-    h("div", { class: "opts" }, autostart, media),
+    section("settings.coat", "lbl-fur", furs),
+    section("settings.accent", "lbl-accent", accs),
+    section("settings.theme", "lbl-theme", themes),
+    h("div", { class: "opts" }, langRow, autostart.b, media.b),
   );
 
   function update(s: AppState, dark: boolean): void {
-    for (const t of thumbs) {
-      const skin = SKINS.find((k) => k.id === t.id) ?? SKINS[0];
-      t.canvas.draw(FRAMES.awake, skin.palette, dark);
-      t.btn.setAttribute("aria-checked", String(s.settings.skin === t.id));
+    for (const l of labels) l.update();
+    for (const th of thumbs) {
+      const skin = SKINS.find((k) => k.id === th.id) ?? SKINS[0];
+      th.canvas.draw(FRAMES.awake, skin.palette, dark);
+      th.btn.setAttribute("aria-checked", String(s.settings.skin === th.id));
+      setText(th.name, t(`skin.${th.id}`));
     }
-    for (const a of accBtns) a.b.setAttribute("aria-checked", String(s.settings.accent === a.color));
-    for (const t of themeBtns) t.b.setAttribute("aria-checked", String(s.settings.theme === t.id));
+    for (const a of accBtns) {
+      a.b.setAttribute("aria-checked", String(s.settings.accent === a.color));
+      a.b.setAttribute("aria-label", t(a.name));
+    }
+    for (const th of themeBtns) {
+      th.b.setAttribute("aria-checked", String(s.settings.theme === th.id));
+      setText(th.name, t(`theme.${th.id}`));
+    }
+    for (const l of langBtns) {
+      l.b.setAttribute("aria-checked", String(s.settings.language === l.id));
+      if (!l.name) setText(l.b, t("lang.system"));
+    }
+    setText(langLabel, t("settings.language"));
     syncRadios(furs);
     syncRadios(accs);
     syncRadios(themes);
-    autostart.setAttribute("aria-checked", String(s.settings.autostart));
-    media.setAttribute("aria-checked", String(s.settings.mediaKeys));
-    media.hidden = s.platform !== "macos";
+    syncRadios(langs);
+    autostart.b.setAttribute("aria-checked", String(s.settings.autostart));
+    setText(autostart.label, t("opt.autostart"));
+    media.b.setAttribute("aria-checked", String(s.settings.mediaKeys));
+    setText(media.label, t("opt.media"));
+    media.b.hidden = s.platform !== "macos";
   }
 
   function rescale(): void {
-    for (const t of thumbs) t.canvas.updateScale();
+    for (const th of thumbs) th.canvas.updateScale();
   }
 
   return { el, update, rescale };

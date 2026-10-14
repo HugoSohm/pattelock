@@ -1,3 +1,4 @@
+import { hasText, t } from "./i18n.ts";
 import type { KeyId, Platform, Shortcut } from "./types.ts";
 
 export interface KeyDef {
@@ -23,17 +24,17 @@ export function keyGroups(platform: Platform): KeyDef[][] {
     [
       {
         id: "PrintScreen",
-        label: mac ? "F13" : "Impr.",
-        name: mac ? "F13" : "Impression écran",
+        label: mac ? "F13" : t("key.printScreen"),
+        name: mac ? "F13" : t("key.printScreen.name"),
         wide: true,
       },
       {
         id: "ScrollLock",
-        label: mac ? "F14" : "Défil.",
-        name: mac ? "F14" : "Arrêt défilement",
+        label: mac ? "F14" : t("key.scrollLock"),
+        name: mac ? "F14" : t("key.scrollLock.name"),
         wide: true,
       },
-      { id: "Pause", label: mac ? "F15" : "Pause", name: mac ? "F15" : "Pause", wide: true },
+      { id: "Pause", label: mac ? "F15" : t("key.pause"), name: mac ? "F15" : t("key.pause"), wide: true },
     ],
   ];
 }
@@ -73,22 +74,7 @@ export const MODIFIER_CODES: ReadonlySet<string> = new Set([
   "OSRight",
 ]);
 
-const CODE_LABELS: Record<string, string> = {
-  Space: "Espace",
-  Enter: "Entrée",
-  Tab: "Tab",
-  Backspace: "Retour",
-  Escape: "Échap",
-  Insert: "Inser",
-  Delete: "Suppr",
-  Home: "Début",
-  End: "Fin",
-  PageUp: "Page haut",
-  PageDown: "Page bas",
-  ArrowUp: "Haut",
-  ArrowDown: "Bas",
-  ArrowLeft: "Gauche",
-  ArrowRight: "Droite",
+const SYMBOLS: Record<string, string> = {
   Minus: "-",
   Equal: "=",
   BracketLeft: "[",
@@ -102,11 +88,14 @@ const CODE_LABELS: Record<string, string> = {
   Slash: "/",
 };
 
+/** Libellé d'une touche à partir de son `KeyboardEvent.code`, dans la langue courante. */
 export function codeLabel(code: string): string {
   if (code.startsWith("Key")) return code.slice(3);
   if (code.startsWith("Digit")) return code.slice(5);
-  if (code.startsWith("Numpad")) return `Pavé ${code.slice(6)}`;
-  return CODE_LABELS[code] ?? code;
+  if (code.startsWith("Numpad")) return t("code.numpad", { n: code.slice(6) });
+  const key = `code.${code}`;
+  if (hasText(key)) return t(key);
+  return SYMBOLS[code] ?? code;
 }
 
 /** Morceaux du raccourci, dans l'ordre d'affichage (un `<kbd>` par morceau). */
@@ -116,12 +105,12 @@ export function shortcutParts(s: Shortcut, platform: Platform): string[] {
   if (mac) {
     if (s.ctrl) parts.push("Ctrl");
     if (s.alt) parts.push("Option");
-    if (s.shift) parts.push("Maj");
+    if (s.shift) parts.push(t("mod.shift"));
     if (s.meta) parts.push("Cmd");
   } else {
     if (s.ctrl) parts.push("Ctrl");
     if (s.alt) parts.push("Alt");
-    if (s.shift) parts.push("Maj");
+    if (s.shift) parts.push(t("mod.shift"));
     if (s.meta) parts.push(platform === "windows" ? "Win" : "Super");
   }
   parts.push(s.label ?? codeLabel(s.key));

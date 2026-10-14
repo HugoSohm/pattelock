@@ -18,7 +18,7 @@ use x11rb::CURRENT_TIME;
 
 use super::super::combo::Mods;
 use super::super::keys::{evdev_key, from_evdev_key, BlockableKey, X11_KEYCODE_OFFSET};
-use super::super::{GuardMode, GuardStatus, KeyGuard, Shared};
+use super::super::{GuardMode, GuardStatus, KeyGuard, Reason, Shared};
 
 /// Combinaisons capturées pour chaque touche : sans modificateur, Verr. Maj, NumLock, les deux.
 fn lock_combos() -> [ModMask; 4] {
@@ -145,14 +145,6 @@ impl X11Guard {
                 }
                 if !refused.is_empty() {
                     status = GuardStatus::Partial {
-                        reason: format!(
-                            "{} déjà prise(s) par le système, impossible de la bloquer.",
-                            refused
-                                .iter()
-                                .map(|k| label(*k))
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        ),
                         unavailable: refused,
                     };
                 }
@@ -162,23 +154,12 @@ impl X11Guard {
                     grabs.keyboard = self.grab_keyboard();
                 }
                 if !grabs.keyboard {
-                    status = GuardStatus::Unavailable {
-                        reason: "Une autre application tient déjà le clavier : le verrouillage complet n’a pas pu s’activer.".into(),
-                    };
+                    status = GuardStatus::unavailable(Reason::KeyboardBusy);
                 }
             }
         }
         let _ = self.conn.flush();
         self.set_status(status);
-    }
-}
-
-fn label(key: BlockableKey) -> &'static str {
-    match key {
-        BlockableKey::PrintScreen => "Impr. écran",
-        BlockableKey::ScrollLock => "Arrêt défil.",
-        BlockableKey::Pause => "Pause",
-        k => k.id(),
     }
 }
 
@@ -205,9 +186,7 @@ fn event_loop(conn: Arc<RustConnection>, shared: Arc<Shared>, status: Arc<Mutex<
             Err(e) => {
                 log::error!("connexion X11 perdue : {e}");
                 if let Ok(mut s) = status.lock() {
-                    *s = GuardStatus::Unavailable {
-                        reason: "Connexion au serveur X perdue.".into(),
-                    };
+                    *s = GuardStatus::unavailable(Reason::X11Lost);
                 }
                 return;
             }

@@ -22,7 +22,7 @@ use evdev::{AttributeSet, Device, EventType, InputEvent, KeyCode};
 
 use super::super::combo::{ComboEvent, ModKey, ModTracker};
 use super::super::keys::from_evdev_key;
-use super::super::{GuardMode, GuardStatus, KeyGuard, Shared};
+use super::super::{GuardMode, GuardStatus, KeyGuard, Reason, Shared};
 
 const VIRTUAL_NAME: &str = "Pattelock virtual keyboard";
 const RULES_INSTALLED: &str = "/usr/lib/udev/rules.d/70-pattelock.rules";
@@ -159,9 +159,7 @@ impl Inner {
         }
         let current = self.status.lock().map(|s| s.clone()).ok();
         if found == 0 {
-            self.set_status(GuardStatus::Unavailable {
-                reason: "Aucun clavier accessible n’a été trouvé.".into(),
-            });
+            self.set_status(GuardStatus::unavailable(Reason::NoKeyboard));
         } else if current != Some(GuardStatus::Ok) {
             self.set_status(GuardStatus::Ok);
         }
@@ -322,11 +320,7 @@ pub fn start(shared: Arc<Shared>) -> Box<dyn KeyGuard> {
     }
     let virt = match build_virtual() {
         Ok(v) => v,
-        Err(e) => {
-            return Box::new(super::Unavailable(format!(
-                "Clavier virtuel uinput impossible à créer ({e})."
-            )))
-        }
+        Err(e) => return Box::new(super::Unavailable(Reason::UinputFailed, e.to_string())),
     };
     let inner = Arc::new(Inner {
         shared,

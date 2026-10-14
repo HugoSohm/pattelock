@@ -25,7 +25,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use super::combo::{windows_native, ComboEvent, ModKey, ModTracker};
 use super::keys::from_windows_vk;
-use super::{GuardMode, GuardStatus, KeyGuard, Shared};
+use super::{GuardMode, GuardStatus, KeyGuard, Reason, Shared};
 
 /// État partagé lu par la procédure du hook (une seule instance par processus).
 static SHARED: OnceLock<Arc<Shared>> = OnceLock::new();
@@ -154,9 +154,8 @@ pub fn start(shared: Arc<Shared>) -> Box<dyn KeyGuard> {
     }
     let _ = BLOCK_INJECTED.set(block_injected);
     if SHARED.set(shared).is_err() {
-        *status.lock().unwrap_or_else(|e| e.into_inner()) = GuardStatus::Unavailable {
-            reason: "Le hook clavier est déjà installé.".into(),
-        };
+        *status.lock().unwrap_or_else(|e| e.into_inner()) =
+            GuardStatus::unavailable(Reason::AlreadyInstalled);
         return Box::new(WindowsGuard { status });
     }
 
@@ -173,9 +172,7 @@ pub fn start(shared: Arc<Shared>) -> Box<dyn KeyGuard> {
             };
             let result = match hook {
                 Ok(_) => GuardStatus::Ok,
-                Err(e) => GuardStatus::Unavailable {
-                    reason: format!("Windows a refusé le hook clavier ({e})."),
-                },
+                Err(e) => GuardStatus::unavailable_with(Reason::HookRefused, e),
             };
             let installed = result == GuardStatus::Ok;
             if let Ok(mut s) = thread_status.lock() {
@@ -201,9 +198,7 @@ pub fn start(shared: Arc<Shared>) -> Box<dyn KeyGuard> {
         }
         Err(e) => {
             if let Ok(mut s) = status.lock() {
-                *s = GuardStatus::Unavailable {
-                    reason: format!("Thread du hook non démarré ({e})."),
-                };
+                *s = GuardStatus::unavailable_with(Reason::ThreadFailed, e);
             }
         }
     }

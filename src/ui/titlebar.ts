@@ -1,5 +1,6 @@
-import { h } from "./dom.ts";
-import { back, close, dots, minimize, paw } from "./icons.ts";
+import { t } from "../i18n.ts";
+import { h, setText } from "./dom.ts";
+import { back, close, gear, minimize, paw } from "./icons.ts";
 
 export interface TitlebarHandlers {
   onSettings(): void;
@@ -11,15 +12,13 @@ export interface TitlebarHandlers {
 export interface Titlebar {
   el: HTMLElement;
   setView(view: "main" | "settings"): void;
+  /** Met à jour les textes (changement de langue). */
+  update(): void;
 }
 
 export function createTitlebar(handlers: TitlebarHandlers): Titlebar {
-  const backBtn = h(
-    "button",
-    { class: "back", attrs: { type: "button", "aria-label": "Retour à l’écran principal" } },
-    back(),
-    h("span", { text: "Réglages" }),
-  );
+  const backLabel = h("span");
+  const backBtn = h("button", { class: "back", attrs: { type: "button" } }, back(), backLabel);
   backBtn.addEventListener("click", () => handlers.onBack());
 
   const brand = h(
@@ -29,17 +28,11 @@ export function createTitlebar(handlers: TitlebarHandlers): Titlebar {
     h("span", { text: "Pattelock" }),
   );
 
-  const settingsBtn = h("button", { attrs: { type: "button", "aria-label": "Réglages" } }, dots());
+  const settingsBtn = h("button", { attrs: { type: "button" } }, gear());
   settingsBtn.addEventListener("click", () => handlers.onSettings());
-  const minBtn = h("button", { attrs: { type: "button", "aria-label": "Réduire la fenêtre" } }, minimize());
+  const minBtn = h("button", { attrs: { type: "button" } }, minimize());
   minBtn.addEventListener("click", () => handlers.onMinimize());
-  const closeBtn = h(
-    "button",
-    {
-      attrs: { type: "button", "aria-label": "Fermer la fenêtre (Pattelock reste dans la barre des tâches)" },
-    },
-    close(),
-  );
+  const closeBtn = h("button", { attrs: { type: "button" } }, close());
   closeBtn.addEventListener("click", () => handlers.onClose());
 
   const el = h(
@@ -50,6 +43,20 @@ export function createTitlebar(handlers: TitlebarHandlers): Titlebar {
     h("div", { class: "winbtns" }, settingsBtn, minBtn, closeBtn),
   );
 
+  /** Libellé accessible et infobulle au survol. */
+  const label = (b: HTMLElement, text: string) => {
+    b.setAttribute("aria-label", text);
+    b.title = text;
+  };
+
+  function update(): void {
+    setText(backLabel, t("titlebar.settings"));
+    backBtn.setAttribute("aria-label", t("titlebar.back"));
+    label(settingsBtn, t("titlebar.settings"));
+    label(minBtn, t("titlebar.minimize"));
+    label(closeBtn, t("titlebar.close"));
+  }
+
   function setView(view: "main" | "settings"): void {
     const settings = view === "settings";
     backBtn.hidden = !settings;
@@ -57,6 +64,7 @@ export function createTitlebar(handlers: TitlebarHandlers): Titlebar {
     settingsBtn.hidden = settings;
   }
   setView("main");
+  update();
 
-  return { el, setView };
+  return { el, setView, update };
 }

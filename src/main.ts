@@ -7,6 +7,7 @@ import type { Backend } from "./backend/types.ts";
 import { CatAnimator } from "./cat/catAnimator.ts";
 import { SpriteCanvas } from "./cat/render.ts";
 import { skinById } from "./cat/skins.ts";
+import { type Lang, resolveLang, setLang } from "./i18n.ts";
 import { applyAccent, ThemeController } from "./theme.ts";
 import type { AppState, KeyId } from "./types.ts";
 import { h } from "./ui/dom.ts";
@@ -95,7 +96,20 @@ async function start(backend: Backend): Promise<void> {
     sendAnchor();
   }
 
+  /** Langue de l'UI : réglage, ou langue de l'OS en mode « Système ». */
+  let uiLang: Lang | null = null;
+  function applyLanguage(): void {
+    const next = resolveLang(state.settings.language);
+    if (next === uiLang) return;
+    uiLang = next;
+    setLang(next);
+    titlebar.update();
+    // Le menu du tray suit la même langue.
+    backend.setUiLanguage(next);
+  }
+
   function render(): void {
+    applyLanguage();
     theme.setPref(state.settings.theme);
     applyAccent(state.settings.accent);
     const dark = theme.dark;
@@ -149,6 +163,8 @@ async function start(backend: Backend): Promise<void> {
   });
 
   window.addEventListener("resize", rescale);
+  // Langue de l'OS changée pendant que l'app tourne (mode « Système »).
+  window.addEventListener("languagechange", () => render());
 
   rescale();
   render();

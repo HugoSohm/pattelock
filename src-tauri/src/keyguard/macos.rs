@@ -31,7 +31,7 @@ use objc2_core_graphics::{
 
 use super::combo::Mods;
 use super::keys::{from_macos_keycode, macos_function_row_keycode, macos_media_key};
-use super::{GuardMode, GuardStatus, KeyGuard, Shared};
+use super::{GuardMode, GuardStatus, KeyGuard, Reason, Shared};
 
 const SETTINGS_URL: &str =
     "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
@@ -217,22 +217,12 @@ fn run_tap(status: &Mutex<GuardStatus>) {
         )
     };
     let Some(port) = port else {
-        set(
-            status,
-            GuardStatus::Unavailable {
-                reason: "macOS a refusé l’event tap. Vérifie l’autorisation Accessibilité, puis relance Pattelock.".into(),
-            },
-        );
+        set(status, GuardStatus::unavailable(Reason::TapRefused));
         return;
     };
     TAP.store((&*port as *const CFMachPort).cast_mut(), Ordering::Release);
     let Some(source) = CFMachPort::new_run_loop_source(None, Some(&port), 0) else {
-        set(
-            status,
-            GuardStatus::Unavailable {
-                reason: "Boucle d’événements macOS indisponible.".into(),
-            },
-        );
+        set(status, GuardStatus::unavailable(Reason::RunLoop));
         return;
     };
     let Some(run_loop) = CFRunLoop::current() else {
@@ -295,9 +285,7 @@ pub fn start(shared: Arc<Shared>) -> Box<dyn KeyGuard> {
     if let Err(e) = spawned {
         set(
             &status,
-            GuardStatus::Unavailable {
-                reason: format!("Thread du blocage non démarré ({e})."),
-            },
+            GuardStatus::unavailable_with(Reason::ThreadFailed, e),
         );
     }
     Box::new(MacGuard { status })
