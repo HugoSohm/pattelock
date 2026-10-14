@@ -1,3 +1,4 @@
+mod autostart;
 mod commands;
 mod core;
 mod counter;
@@ -35,6 +36,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(hotkey::plugin())
+        .plugin(autostart::plugin())
         .manage(window::MonitorTracker::default())
         .manage(CursorFollow::default())
         .setup(|app| {
@@ -45,6 +47,10 @@ pub fn run() {
             app.manage(core);
             app.state::<CursorFollow>().start(handle.clone());
 
+            if autostart::launched_at_login(std::env::args()) {
+                // Lancée avec la session : on reste discrètement dans le tray.
+                window::keep_hidden();
+            }
             window::create_main(&handle, theme)?;
             tray::create(&handle, mode)?;
             // Filet de sécurité : la fenêtre s'affiche même si le front ne répond pas.

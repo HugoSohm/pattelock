@@ -85,7 +85,11 @@ impl Core {
         let store = StoreBuilder::new(app, STORE_FILE)
             .disable_auto_save()
             .build()?;
-        let prefs = Prefs::from_json(store.get(PREFS_KEY).as_ref());
+        let mut prefs = Prefs::from_json(store.get(PREFS_KEY).as_ref());
+        // Le système fait foi pour le lancement au démarrage.
+        if let Some(enabled) = crate::autostart::is_enabled(app) {
+            prefs.autostart = enabled;
+        }
         let total = total_from_json(store.get(TOTAL_KEY).as_ref());
         // Le mode clavier entier n'est jamais restauré.
         let mode = startup_mode(prefs.active);
@@ -189,8 +193,14 @@ impl Core {
         self.commit();
     }
 
-    pub fn update_settings(&self, patch: SettingsPatch) {
+    pub fn update_settings(&self, mut patch: SettingsPatch) {
         let theme_changed = patch.theme.is_some();
+        if let Some(enabled) = patch.autostart {
+            if let Err(e) = crate::autostart::set(&self.app, enabled) {
+                log::error!("lancement au démarrage non modifié : {e}");
+                patch.autostart = None;
+            }
+        }
         {
             let mut inner = self.lock();
             patch.apply_to(&mut inner.prefs);
