@@ -92,8 +92,8 @@ export function createMainView(handlers: MainHandlers): MainView {
     h("div", { class: "status" }, h("div", { class: "badge" }, led, tag), title, sub),
     h("div", { class: "hint" }, paw(), hint),
     strip,
-    legend,
-    activity,
+    // Légende et compteur sur une même ligne : la bande à deux rangées prend de la hauteur.
+    h("div", { class: "meta" }, legend, activity),
     banner,
     updateBar,
     h("div", { class: "footer" }, lockall, shortcut),
