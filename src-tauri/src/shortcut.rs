@@ -98,8 +98,31 @@ impl Shortcut {
         Ok(())
     }
 
+    /// Touche transmise au plugin. Sous Windows et X11, le plugin traduit `KeyQ` selon la
+    /// disposition (caractère Q), alors que le hook raisonne en position physique : on
+    /// lui passe donc le caractère réellement imprimé sur la touche (`A` sur la position
+    /// `KeyQ` d'un AZERTY). Le Mac travaille déjà en positions physiques.
+    pub fn plugin_key(&self, mac: bool) -> String {
+        if !mac {
+            if let Some(c) = self.label.as_deref().and_then(single_char) {
+                if c.is_ascii_alphabetic() {
+                    return format!("Key{}", c.to_ascii_uppercase());
+                }
+                if c.is_ascii_digit() {
+                    return format!("Digit{c}");
+                }
+            }
+        }
+        self.key.clone()
+    }
+
     /// Chaîne attendue par le plugin global-shortcut (ex. `control+alt+KeyK`).
     pub fn accelerator(&self) -> String {
+        self.accelerator_for(cfg!(target_os = "macos"))
+    }
+
+    fn accelerator_for(&self, mac: bool) -> String {
+        let key = self.plugin_key(mac);
         let mut parts: Vec<&str> = Vec::new();
         if self.ctrl {
             parts.push("control");
@@ -113,8 +136,16 @@ impl Shortcut {
         if self.meta {
             parts.push("super");
         }
-        parts.push(&self.key);
+        parts.push(&key);
         parts.join("+")
+    }
+}
+
+fn single_char(s: &str) -> Option<char> {
+    let mut chars = s.chars();
+    match (chars.next(), chars.next()) {
+        (Some(c), None) => Some(c),
+        _ => None,
     }
 }
 
@@ -206,6 +237,27 @@ mod tests {
             sc(true, true, true, true, "Digit1").accelerator(),
             "control+alt+shift+super+Digit1"
         );
+    }
+
+    #[test]
+    fn plugin_key_follows_the_printed_character() {
+        // AZERTY : la position physique KeyQ porte la lettre A.
+        let mut s = sc(true, true, false, false, "KeyQ");
+        s.label = Some("A".into());
+        assert_eq!(s.accelerator_for(false), "control+alt+KeyA");
+        // Sur Mac, le plugin raisonne en positions physiques.
+        assert_eq!(s.accelerator_for(true), "control+alt+KeyQ");
+        // Chiffres et libellés longs.
+        s.key = "Digit1".into();
+        s.label = Some("1".into());
+        assert_eq!(s.plugin_key(false), "Digit1");
+        s.key = "Space".into();
+        s.label = Some("Espace".into());
+        assert_eq!(s.plugin_key(false), "Space");
+        // Libellé accentué : on garde la position physique.
+        s.key = "Digit2".into();
+        s.label = Some("É".into());
+        assert_eq!(s.plugin_key(false), "Digit2");
     }
 
     #[test]

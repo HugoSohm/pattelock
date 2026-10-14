@@ -45,10 +45,14 @@ pub fn set_shortcut(core: CoreState<'_>, shortcut: Shortcut) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub fn begin_shortcut_capture() {}
+pub fn begin_shortcut_capture(core: CoreState<'_>) {
+    core.begin_shortcut_capture();
+}
 
 #[tauri::command]
-pub fn end_shortcut_capture() {}
+pub fn end_shortcut_capture(core: CoreState<'_>) {
+    core.end_shortcut_capture();
+}
 
 #[tauri::command]
 pub fn open_accessibility_settings(core: CoreState<'_>) {

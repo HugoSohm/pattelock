@@ -88,6 +88,8 @@ pub struct Shared {
     mask: AtomicU32,
     unlock: AtomicU64,
     media_keys: AtomicBool,
+    /// Un nouveau raccourci est en cours d'enregistrement : on ne le reconnaît pas.
+    capturing: AtomicBool,
     events: SyncSender<GuardEvent>,
 }
 
@@ -99,6 +101,7 @@ impl Shared {
             mask: AtomicU32::new(0),
             unlock: AtomicU64::new(Unlock::default().pack()),
             media_keys: AtomicBool::new(true),
+            capturing: AtomicBool::new(false),
             events: tx,
         };
         (shared, rx)
@@ -133,6 +136,15 @@ impl Shared {
     #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     pub fn media_keys(&self) -> bool {
         self.media_keys.load(Ordering::Acquire)
+    }
+
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    pub fn capturing(&self) -> bool {
+        self.capturing.load(Ordering::Acquire)
+    }
+
+    pub fn set_capturing(&self, capturing: bool) {
+        self.capturing.store(capturing, Ordering::Release);
     }
 
     pub fn set(&self, mode: GuardMode, mask: u32, shortcut: &Shortcut, media_keys: bool) {
@@ -171,6 +183,11 @@ pub trait KeyGuard: Send + Sync {
     fn update(&self) {}
     /// Vérifie à nouveau les permissions (macOS, Linux) et relance le hook si possible.
     fn retry(&self) {}
+    /// Le hook reconnaît-il lui-même le raccourci dans tous les modes ? (evdev sous
+    /// Wayland, où le plugin global-shortcut ne fonctionne pas.)
+    fn detects_shortcut(&self) -> bool {
+        false
+    }
 }
 
 /// Démarre le hook de l'OS courant.

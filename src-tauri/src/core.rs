@@ -74,6 +74,8 @@ pub struct Core {
     inner: Mutex<Inner>,
     shared: Arc<Shared>,
     guard: Box<dyn KeyGuard>,
+    /// Le raccourci passe par le plugin global-shortcut (partout sauf Wayland).
+    uses_plugin: bool,
     pub counter: Counter,
 }
 
@@ -98,6 +100,12 @@ impl Core {
         );
         let guard = keyguard::start(shared.clone());
         log::info!("blocage : {:?}", guard.status());
+        let uses_plugin = !guard.detects_shortcut();
+        if uses_plugin {
+            if let Err(e) = crate::hotkey::register(app, &prefs.shortcut) {
+                log::warn!("raccourci global inactif : {}", e.message());
+            }
+        }
 
         let core = Arc::new(Core {
             app: app.clone(),
@@ -105,6 +113,7 @@ impl Core {
             inner: Mutex::new(Inner { mode, prefs }),
             shared,
             guard,
+            uses_plugin,
             counter: Counter::new(total),
         });
         spawn_event_pump(app.clone(), core.clone(), rx);
@@ -192,8 +201,33 @@ impl Core {
         self.commit();
     }
 
+    /// Enregistrement d'un nouveau raccourci : l'actuel est suspendu pour ne pas basculer
+    /// la protection si on le presse.
+    pub fn begin_shortcut_capture(&self) {
+        self.shared.set_capturing(true);
+        if self.uses_plugin {
+            crate::hotkey::unregister(&self.app, &self.prefs().shortcut);
+        }
+    }
+
+    pub fn end_shortcut_capture(&self) {
+        self.shared.set_capturing(false);
+        if self.uses_plugin {
+            if let Err(e) = crate::hotkey::register(&self.app, &self.prefs().shortcut) {
+                log::warn!("raccourci global inactif : {}", e.message());
+            }
+        }
+    }
+
     pub fn set_shortcut(&self, shortcut: Shortcut) -> Result<(), ShortcutError> {
         shortcut.validate()?;
+        let old = self.prefs().shortcut;
+        if self.uses_plugin && old.accelerator() != shortcut.accelerator() {
+            // Refusé si le système ou une autre app utilise déjà la combinaison.
+            crate::hotkey::register(&self.app, &shortcut)?;
+            crate::hotkey::unregister(&self.app, &old);
+        }
+        log::info!("nouveau raccourci : {}", shortcut.accelerator());
         self.lock().prefs.shortcut = shortcut;
         self.commit();
         Ok(())

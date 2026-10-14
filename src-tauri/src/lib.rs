@@ -2,6 +2,7 @@ mod commands;
 mod core;
 mod counter;
 mod cursor;
+mod hotkey;
 mod keyguard;
 mod settings;
 mod shortcut;
@@ -28,6 +29,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(hotkey::plugin())
         .manage(window::MonitorTracker::default())
         .manage(CursorFollow::default())
         .setup(|app| {

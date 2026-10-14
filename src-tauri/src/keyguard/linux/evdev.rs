@@ -70,7 +70,7 @@ pub enum Verdict {
 /// signale interceptions et raccourci. Fonction pure, testée sans périphérique.
 pub fn judge(shared: &Shared, tracker: &mut ModTracker, code: u16, value: i32) -> Verdict {
     let combo = tracker.handle(modifier(code), u32::from(code), value == 1, shared.unlock());
-    if combo == ComboEvent::Unlock {
+    if combo == ComboEvent::Unlock && !shared.capturing() {
         // Sous Wayland, le raccourci est toujours reconnu ici, quel que soit le mode.
         shared.unlock_pressed();
         return Verdict::Swallow;
@@ -287,6 +287,10 @@ impl KeyGuard for EvdevGuard {
 
     fn update(&self) {
         self.0.wake_all();
+    }
+
+    fn detects_shortcut(&self) -> bool {
+        true
     }
 }
 
