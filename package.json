@@ -2,13 +2,17 @@
   "name": "pattelock",
   "private": true,
   "version": "0.1.0",
-  "description": "Pattelock - Désactive temporairement des touches du clavier pour que ton chat puisse dormir dessus",
+  "description": "Pattelock - Let your cat nap on the keyboard: temporarily disables keys it would press",
   "author": "Hugo Sohm",
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/HugoSohm/pattelock.git"
   },
+  "bugs": {
+    "url": "https://github.com/HugoSohm/pattelock/issues"
+  },
+  "homepage": "https://github.com/HugoSohm/pattelock#readme",
   "engines": {
     "node": ">=24.0.0"
   },

@@ -1,115 +1,145 @@
-# Pattelock
+<div align="center">
+  <img src="src-tauri/icons/128x128@2x.png" width="120" height="120" />
+  <h1>Pattelock</h1>
+  <p>Let your cat nap on the keyboard. Pattelock disables the keys it would press.</p>
 
-Ton chat s'allonge sur le clavier ? Pattelock désactive temporairement certaines touches pour que rien ne se déclenche : F1 à F12, Impr. écran, Arrêt défil. et Pause, ou même tout le clavier. La souris, elle, fonctionne toujours.
+  [![Latest Release](https://img.shields.io/github/v/release/HugoSohm/pattelock?style=flat-square&color=FF9548)](https://github.com/HugoSohm/pattelock/releases/latest)
+  [![Tauri 2.0](https://img.shields.io/badge/Tauri-2.0-2496ED?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Rust](https://img.shields.io/badge/Rust-Latest-E34C26?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+  [![Platforms](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux-1F1B24?style=flat-square)](https://github.com/HugoSohm/pattelock/releases/latest)
+  [![License](https://img.shields.io/badge/License-AGPLv3-6A6472?style=flat-square)](LICENSE)
+</div>
 
-![Le chat dort, blocage en cours](docs/maquette/pattelock-actif.png)
+---
 
-Petite app desktop pour Windows, macOS et Linux, construite avec [Tauri 2](https://tauri.app).
+**Pattelock** is a small desktop app for **cat owners who work at a computer**. When your cat lies down on the keyboard, F1 to F12, Print Screen, Scroll Lock and Pause stop doing anything: no help page, no reload, no full screen, no screenshot. Need more? Lock the whole keyboard in one click. Your mouse keeps working.
 
-## Fonctionnalités
+<div align="center">
+  <img src="docs/maquette/pattelock-actif.png" width="380" />
+  <img src="docs/maquette/pattelock-sombre-pause.png" width="380" />
+</div>
 
-- **Blocage global** des touches F1 à F12, Impr. écran, Arrêt défil. et Pause, même quand Pattelock n'a pas le focus. Chaque touche se bloque ou se libère d'un clic sur la bande clavier.
-- **Le chat comme interrupteur** : il dort quand la protection est active, il se réveille quand elle est en pause. Clique dessus pour basculer.
-- **Verrouiller tout le clavier** : bloque toutes les touches, sauf la combinaison de déverrouillage. On en sort par le bouton « Déverrouiller le clavier », en cliquant sur le chat, avec le raccourci ou depuis le tray.
-- **Raccourci global** pour basculer, `Ctrl + Alt + K` par défaut (`Cmd + Option + K` sur Mac), modifiable avec le bouton « Changer ».
-- **Compteur** de coups de patte évités depuis l'installation.
-- **Chat animé** en pixel art : il respire et ronfle quand il dort, suit le curseur des yeux quand il est réveillé. Cinq pelages, quatre couleurs d'accent, thèmes clair, sombre ou système.
-- **Tray** : Pattelock reste dans la barre des tâches (ou la barre de menus) quand on ferme la fenêtre, et peut se lancer au démarrage.
+### ✨ Features
 
-Aucun appel réseau. Les réglages et le compteur sont enregistrés localement.
+- 🐾 **System-wide blocking**: F1 to F12, Print Screen, Scroll Lock and Pause are swallowed even when Pattelock is in the background. Click a key on the strip to block or free it.
+- 😺 **The cat is the switch**: it sleeps while protection is on and wakes up when it's paused. Click it to toggle.
+- 🔒 **Lock the whole keyboard**: every key is ignored except the unlock shortcut. Get out with the "Unlock keyboard" button, by clicking the cat, with the shortcut or from the tray.
+- ⌨️ **Global shortcut**: `Ctrl + Alt + K` (`Cmd + Option + K` on macOS) toggles protection from anywhere. Change it with one click.
+- 📊 **Paw counter**: counts every keystroke your cat didn't get to send, since installation.
+- 🎨 **Animated pixel cat**: it breathes and snores while asleep, and follows your cursor with its eyes when awake. Five coats, four accent colors, light, dark or system theme.
+- 🗂️ **Lives in the tray**: closing the window keeps Pattelock running in the taskbar or menu bar, and it can start with your session.
+- 🔒 **100% local**: no network calls, no telemetry. Settings and the counter stay on your machine.
 
-## Installation
+---
 
-Les installateurs sont publiés sur la page [Releases](https://github.com/HugoSohm/pattelock/releases).
+### 📦 Installation
 
-### Windows
+Download the installer for your system from the [latest release](https://github.com/HugoSohm/pattelock/releases/latest).
 
-Lance `Pattelock_x.y.z_x64-setup.exe` (ou `arm64`). Aucune autorisation particulière n'est nécessaire.
+| System | File |
+| --- | --- |
+| Windows | `Pattelock_x.y.z_x64-setup.exe` or `_arm64-setup.exe` |
+| macOS | `Pattelock_x.y.z_aarch64.dmg` (Apple Silicon) or `_x64.dmg` (Intel) |
+| Linux | `.AppImage`, `.deb` (Debian, Ubuntu...) or `.rpm` (Fedora...) |
 
-### macOS
+### 🍎 macOS Setup
 
-L'app n'est pas signée avec un certificat Apple Developer, d'où deux étapes en plus :
+Pattelock is not signed with an Apple Developer certificate, so macOS needs two extra steps:
 
-1. Ouvre `Pattelock_x.y.z_aarch64.dmg` (Apple Silicon) ou `_x64.dmg` (Intel) et glisse **Pattelock.app** dans **Applications**.
-2. Dans un terminal :
+1. Move `Pattelock.app` to your `/Applications` folder.
+2. Open a terminal and run:
    ```bash
    sudo xattr -c /Applications/Pattelock.app
    ```
-3. Au premier lancement, autorise Pattelock dans **Réglages Système > Confidentialité et sécurité > Accessibilité**. C'est nécessaire pour bloquer des touches. Pattelock affiche un écran avec un bouton qui ouvre directement ce réglage, et démarre le blocage dès que l'autorisation est donnée.
+3. On first launch, allow Pattelock in **System Settings > Privacy & Security > Accessibility**. This is required to block keys. Pattelock shows a screen with a button that opens the right settings pane, and starts blocking as soon as permission is granted.
 
-> Comme l'app est signée « ad hoc », macOS peut redemander l'autorisation Accessibilité après chaque mise à jour. Retire alors Pattelock de la liste et ajoute-le de nouveau.
+> [!NOTE]
+> Because the app is ad hoc signed, macOS may ask for the Accessibility permission again after each update. If blocking stops working, remove Pattelock from the list and add it back.
 
-### Linux
+### 🐧 Linux Setup
 
-Trois formats : `.AppImage`, `.deb` (Debian, Ubuntu…) et `.rpm` (Fedora…).
-
-- **Session X11** : rien à faire, le blocage fonctionne sans droits particuliers.
-- **Session Wayland** : il n'existe pas d'API pour avaler des touches. Pattelock lit donc les claviers dans `/dev/input` et réémet les touches non bloquées par un clavier virtuel `/dev/uinput`. Il faut appartenir au groupe `input` :
+- **X11 session**: nothing to do, blocking works without special permissions.
+- **Wayland session**: Wayland has no API to swallow keys, so Pattelock reads keyboards from `/dev/input` and replays the keys it doesn't block through a virtual keyboard (`/dev/uinput`). Add yourself to the `input` group, then log out and back in:
   ```bash
   sudo usermod -aG input $USER
   ```
-  puis fermer la session et se reconnecter. Les paquets `.deb` et `.rpm` installent la règle udev qui donne l'accès à `/dev/uinput` (`/usr/lib/udev/rules.d/70-pattelock.rules`). Avec l'AppImage, Pattelock affiche la commande complète à lancer, règle comprise. La règle est aussi disponible dans [`packaging/linux/`](packaging/linux/).
+  The `.deb` and `.rpm` packages install the udev rule that grants access to `/dev/uinput`. With the AppImage, Pattelock shows the full command to run, rule included. The rule is also available in [`packaging/linux/`](packaging/linux/).
 
-> Être dans le groupe `input` permet à tes programmes de lire tout le clavier. C'est le prix à payer pour bloquer des touches sous Wayland.
+> [!WARNING]
+> Members of the `input` group can read every keystroke. This is the price of blocking keys on Wayland.
 
-## Bon à savoir
+---
 
-- **On ne peut pas se retrouver enfermé dehors** : en mode clavier entier, la combinaison de déverrouillage est reconnue par le hook lui-même. Le mode clavier entier n'est jamais restauré au redémarrage. Si Pattelock se ferme ou plante, le blocage disparaît avec lui.
-- `Ctrl + Alt + Suppr` (Windows) et les raccourcis système non interceptables restent actifs.
-- **Windows** : quand une fenêtre lancée en administrateur a le focus, Windows ne transmet pas les touches au hook de Pattelock.
-- **macOS** : la rangée du haut envoie souvent des fonctions média (luminosité, son). L'option « Bloquer aussi les fonctions média de la rangée du haut » (active par défaut) les bloque avec la touche F correspondante. Impr. écran, Arrêt défil. et Pause n'existent pas sur un clavier Mac : elles deviennent F13, F14 et F15. Pendant la saisie d'un mot de passe (saisie sécurisée), macOS ne transmet pas les touches. Certaines touches (Globe / fn) sont gérées plus bas que Pattelock.
-- **Linux X11** : une touche déjà réservée par le bureau (souvent Impr. écran pour les captures) ne peut pas être bloquée ; Pattelock l'indique.
+### 🛡️ Safety Nets
 
-## Développement
+You can never get locked out:
+- In whole-keyboard mode, the unlock shortcut is recognized by the keyboard hook itself.
+- Whole-keyboard mode is never restored on restart.
+- If Pattelock quits or crashes, blocking goes away with it.
+- `Ctrl + Alt + Del` on Windows and other system shortcuts that apps cannot intercept keep working.
 
-### Prérequis
+### ⚠️ Known Limitations
 
-- [Node.js](https://nodejs.org) 24 ou plus
-- [Rust](https://rustup.rs) stable
-- Les [prérequis Tauri 2](https://tauri.app/start/prerequisites/) de ton OS (Build Tools C++ et WebView2 sous Windows, Xcode Command Line Tools sous macOS, `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`… sous Linux)
+- **Windows**: when a window running as administrator has focus, Windows does not send keys to Pattelock's hook.
+- **macOS**: Macs have no Print Screen, Scroll Lock or Pause keys, so they become F13, F14 and F15. The top row often sends media functions (brightness, volume): the "also block media functions" option (on by default) blocks them along with the matching F key. During secure input (password fields), macOS hides keystrokes from all apps. Some keys (Globe / fn) are handled below Pattelock.
+- **Linux X11**: a key already reserved by your desktop (often Print Screen for screenshots) cannot be blocked. Pattelock tells you which ones.
 
-### Commandes
+---
 
+### 🚀 Quick Start Guide (Development)
+
+#### 1. Prerequisites
+- [Node.js](https://nodejs.org/) 24 or later
+- [Rust](https://www.rust-lang.org/tools/install) (via rustup)
+- The [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) for your OS (C++ Build Tools and WebView2 on Windows, Xcode Command Line Tools on macOS, `libwebkit2gtk-4.1-dev` and `libayatana-appindicator3-dev` on Linux)
+
+#### 2. Installation
+Clone the repo and install dependencies:
 ```bash
 npm ci
 ```
 
+#### 3. Run in Development
 ```bash
 npm run dev
 ```
 
+> [!NOTE]
+> Key blocking is live in development too. If you lock the whole keyboard, `Ctrl + Alt + K` or a click on the cat gets you out, and stopping the dev server removes the hook.
+
+To work on the interface only, without Rust, run `npm run frontend:dev` and open http://localhost:1420. A fake backend replaces the app core, and URL parameters force a state: `?etat=pause`, `?etat=tout`, `?vue=reglages`, `?theme=dark`, `?plateforme=macos`. All cat animations are shown at http://localhost:1420/anim-demo.html.
+
+---
+
+### 🏗️ Build (Production)
+To generate the installers for your platform:
 ```bash
 npm run build
 ```
+Installers will be located in: `src-tauri/target/release/bundle/`
 
-| Commande | Rôle |
-|---|---|
-| `npm run dev` | Lance l'app en développement |
-| `npm run build` | Construit l'app et ses installateurs |
-| `npm run frontend:dev` | Interface seule dans un navigateur, avec un faux backend (`?etat=pause`, `?etat=tout`, `?vue=reglages`, `?theme=dark`, `?plateforme=macos`…) |
-| `npm run typecheck` / `npm run lint` | TypeScript et Biome |
-| `npm run test:rs` / `npm run lint:rs` / `npm run format:rs` | Tests, clippy et rustfmt |
-| `npm run icons` | Regénère les icônes de l'app et du tray à partir du sprite du chat |
-| `npm run demo:build` | Regénère [`docs/maquette/anim-demo.html`](docs/maquette/anim-demo.html), la démo de toutes les animations du chat |
+The macOS DMG is assembled by [`scripts/macos/build.sh`](scripts/macos/build.sh) after building the `.app` bundle.
 
-Le DMG macOS est construit par [`scripts/macos/build.sh`](scripts/macos/build.sh) après `npm run tauri build -- --bundles app`.
+### 🛠️ Tech Stack
+- **Frontend**: TypeScript (no framework), Vite, canvas pixel art.
+- **Backend**: Rust (Tauri 2.0).
+- **Keyboard hooks**: `SetWindowsHookExW` on Windows, `CGEventTap` on macOS, `XGrabKey` / `XGrabKeyboard` on X11, `evdev` + `uinput` on Wayland.
 
-### Organisation
+---
 
-```
-src/                    interface (Vite + TypeScript, sans framework)
-  cat/                  sprite, pelages, rendu canvas, animations
-  ui/                   écrans et composants
-src-tauri/src/
-  core.rs               état central, persistance, événements vers l'interface
-  keyguard/             blocage des touches : un module par OS
-  window.rs             fenêtre au tiers de l'écran, centrée
-  tray.rs, hotkey.rs, autostart.rs, cursor.rs
-docs/maquette/          maquette de référence et démo des animations
-packaging/linux/        règle udev et module uinput
-scripts/                icônes, fond du DMG, script DMG
-```
+### 🤝 Contributing
 
-## Licence
+Contributions are welcome! Read the [Contributing Guide](CONTRIBUTING.md) to get started.
 
-[AGPL-3.0-or-later](LICENSE). Polices Pixelify Sans et Silkscreen sous [SIL Open Font License](src/assets/fonts/OFL.txt).
+---
+
+### 🛡️ Security
+
+If you discover a security vulnerability within Pattelock, please report it privately via the [Security Policy](SECURITY.md).
+
+---
+
+### 📜 License
+
+This project is licensed under the [GNU AGPLv3 License](LICENSE). The Pixelify Sans and Silkscreen fonts are licensed under the [SIL Open Font License](src/assets/fonts/OFL.txt).

@@ -2,11 +2,11 @@
 
 ## 0.1.0
 
-Première version.
+First release.
 
-- Blocage de F1 à F12, Impr. écran, Arrêt défil. et Pause, touche par touche, même quand Pattelock n'a pas le focus (Windows, macOS, Linux X11 et Wayland).
-- Mode « Verrouiller tout le clavier », déverrouillable par Ctrl + Alt + K (Cmd + Option + K sur Mac), par un clic sur le chat, ou depuis le tray.
-- Raccourci global configurable.
-- Compteur de coups de patte évités.
-- Chat en pixel art animé, 5 pelages, 4 couleurs d'accent, thèmes clair, sombre et système.
-- Icône dans la barre des tâches ou la barre de menus, lancement au démarrage.
+- Blocks F1 to F12, Print Screen, Scroll Lock and Pause, key by key, even when Pattelock is in the background (Windows, macOS, Linux X11 and Wayland).
+- "Lock the whole keyboard" mode, unlocked with Ctrl + Alt + K (Cmd + Option + K on Mac), a click on the cat, or from the tray.
+- Customizable global shortcut.
+- Counter of paw strikes avoided.
+- Animated pixel art cat, 5 coats, 4 accent colors, light, dark and system themes.
+- Tray icon in the taskbar or menu bar, and launch at startup.
