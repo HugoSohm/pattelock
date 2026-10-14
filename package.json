@@ -1,0 +1,43 @@
+{
+  "name": "pattelock",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pattelock - Désactive temporairement des touches du clavier pour que ton chat puisse dormir dessus",
+  "author": "Hugo Sohm",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HugoSohm/pattelock.git"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "frontend:dev": "vite",
+    "frontend:build": "tsc && vite build",
+    "tauri": "tauri",
+    "icons": "node scripts/make-icons.mjs && tauri icon src-tauri/icons/app-icon.png && node -e \"for (const d of ['android', 'ios']) require('fs').rmSync('src-tauri/icons/' + d, { recursive: true, force: true })\"",
+    "lint": "biome check ./src",
+    "lint:fix": "biome check --write ./src",
+    "typecheck": "tsc --noEmit",
+    "lint:rs": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets",
+    "format:rs": "cargo fmt --manifest-path src-tauri/Cargo.toml -- --check",
+    "format:rs:fix": "cargo fmt --manifest-path src-tauri/Cargo.toml",
+    "check:rs": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "test:rs": "cargo test --manifest-path src-tauri/Cargo.toml"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.3",
+    "@tauri-apps/plugin-log": "2.10.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@tauri-apps/cli": "2.12.2",
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}

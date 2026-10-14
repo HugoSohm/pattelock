@@ -1,0 +1,30 @@
+[package]
+name = "pattelock"
+version = "0.1.0"
+description = "Pattelock: désactive temporairement des touches du clavier pour que ton chat puisse dormir dessus"
+authors = ["Hugo Sohm"]
+edition = "2021"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/HugoSohm/pattelock"
+
+[lib]
+# Le suffixe `_lib` évite un conflit de nom entre la lib et le binaire sous Windows,
+# voir https://github.com/rust-lang/cargo/issues/8519
+name = "pattelock_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-log = "2"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

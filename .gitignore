@@ -1,0 +1,26 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Node
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.sw?
+
+# Rust / Tauri
+/src-tauri/target/
+/src-tauri/gen/
+target/
+
+# macOS packaging
+/dmg-staging/
+scripts/**/*.app
