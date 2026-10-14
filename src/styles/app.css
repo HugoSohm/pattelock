@@ -590,7 +590,10 @@ kbd {
   color: var(--ink);
   font-size: 0.875rem;
   text-align: left;
-  border-bottom: 0.1875rem solid var(--line);
+}
+/* Un trait seulement entre deux options, jamais sous la dernière. */
+.opt + .opt:not([hidden]) {
+  border-top: 0.1875rem solid var(--line);
 }
 .sw2 {
   width: 2.5rem;
