@@ -595,18 +595,20 @@ kbd {
 .opt-row {
   cursor: default;
 }
+/* Même hauteur que les interrupteurs (.sw2) : 1,5 rem, contour cranté compris à l'extérieur. */
 .langs {
+  height: 1.5rem;
   display: flex;
   gap: 0.125rem;
-  padding: 0.1875rem;
+  padding: 0.125rem;
   box-shadow: var(--notch3);
 }
 .lg {
-  height: 1.5rem;
-  padding: 0 0.625rem;
+  height: 1.25rem;
+  padding: 0 0.5rem;
   background: transparent;
   color: var(--muted);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 .lg[aria-checked="true"] {
