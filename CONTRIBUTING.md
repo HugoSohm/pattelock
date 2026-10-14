@@ -33,7 +33,7 @@ Thank you for your interest in contributing to Pattelock! We are an open-source 
 - Run in dev mode: `npm run dev`.
 - Run the interface alone in a browser, with a fake backend: `npm run frontend:dev`.
 - Build for production: `npm run build`.
-- Regenerate the app and tray icons from the cat sprite: `npm run icons`.
+- Regenerate the app and tray icons from the Pattelock paw: `npm run icons`.
 - Regenerate the standalone animation demo: `npm run demo:build`.
 
 ### Checks

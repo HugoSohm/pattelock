@@ -1,5 +1,5 @@
 // Génère scripts/macos/dmg-background.png (800 x 625) dans le style pixel de l'app :
-// flèche de l'app vers Applications, petit chat qui dort sur la bande clavier.
+// flèche de l'app vers Applications, et la patte de Pattelock.
 //
 //   node scripts/macos/make-dmg-background.mjs
 //
@@ -8,9 +8,7 @@
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SKINS } from "../../src/cat/skins.ts";
-import { FRAMES } from "../../src/cat/sprite.ts";
-import { encodePng, grid, rgba, stamp } from "../lib/png.mjs";
+import { encodePng, grid, rgba } from "../lib/png.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PX = 5;
@@ -20,7 +18,6 @@ const H = 625 / PX;
 const BG = rgba("#fbfaf7");
 const INK = rgba("#1f1b24");
 const LINE = rgba("#ebe6dd");
-const STRIP = rgba("#f1ede6");
 const ACCENT = rgba("#ff9548");
 
 const g = grid(W, H);
@@ -38,33 +35,25 @@ for (let d = 0; d <= 6; d++) {
   for (let y = 49 - d; y <= 50 + d; y++) g[y][105 - d] = INK;
 }
 
-// Bande clavier crantée (coins vides) sous le chat.
-const sx0 = 50;
-const sx1 = 110;
-const sy0 = 114;
-const sy1 = 120;
-for (let y = sy0; y <= sy1; y++) {
-  for (let x = sx0; x <= sx1; x++) {
-    const edgeX = x === sx0 || x === sx1;
-    const edgeY = y === sy0 || y === sy1;
-    if (edgeX && edgeY) continue;
-    g[y][x] = edgeX || edgeY ? INK : STRIP;
-  }
-}
-// Touches de la bande (bloquées : encre + LED accent).
-for (let k = 0; k < 9; k++) {
-  const kx = sx0 + 3 + k * 6;
-  for (let y = sy0 + 2; y <= sy0 + 4; y++) for (let x = kx; x < kx + 4; x++) g[y][x] = INK;
-  g[sy0 + 2][kx + 3] = ACCENT;
-}
 // Trait léger sous la zone des icônes.
 for (let x = 20; x < W - 20; x++) g[78][x] = LINE;
 
-// Chat qui dort, posé sur la bande, et ses « z ».
-const noir = SKINS[0].palette;
-stamp(g, FRAMES.sleep, 72, sy0 - 20, (ch) => (ch in noir ? rgba(noir[ch]) : null));
-stamp(g, ["XXX", "..X", ".X.", "XXX"], 89, 88, (c) => (c === "X" ? ACCENT : null));
-stamp(g, ["XXXX", "...X", "..X.", ".X..", "XXXX"], 93, 83, (c) => (c === "X" ? ACCENT : null));
+// La patte de Pattelock (4 pixels-sprite par pixel de patte), cernée d'encre, en bas au centre.
+const PAW = ["#.#.#", ".....", ".###.", "#####", ".###."];
+const K = 4;
+const ox = (W - 5 * K) / 2;
+const oy = 94;
+const filled = (x, y) => {
+  const px = Math.floor((x - ox) / K);
+  const py = Math.floor((y - oy) / K);
+  return x >= ox && y >= oy && PAW[py]?.[px] === "#";
+};
+for (let y = oy - 1; y <= oy + 5 * K; y++) {
+  for (let x = ox - 1; x <= ox + 5 * K; x++) {
+    if (filled(x, y)) g[y][x] = ACCENT;
+    else if (filled(x + 1, y) || filled(x - 1, y) || filled(x, y + 1) || filled(x, y - 1)) g[y][x] = INK;
+  }
+}
 
 writeFileSync(join(HERE, "dmg-background.png"), encodePng(g, PX));
 console.log("dmg-background.png généré (800 x 625)");

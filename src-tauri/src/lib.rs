@@ -64,20 +64,10 @@ pub fn run() {
         })
         .on_window_event(|win, event| {
             window::on_window_event(win, event);
-            match event {
-                // Fermer la fenêtre la cache : Pattelock reste dans le tray et le blocage
-                // continue.
-                WindowEvent::CloseRequested { api, .. } => {
-                    api.prevent_close();
-                    window::hide_main(win.app_handle());
-                }
-                // L'icône du tray suit le thème du système.
-                WindowEvent::ThemeChanged(_) => {
-                    if let Some(core) = win.try_state::<Arc<Core>>() {
-                        tray::refresh(win.app_handle(), core.mode(), core.lang());
-                    }
-                }
-                _ => {}
+            // Fermer la fenêtre la cache : Pattelock reste dans le tray et le blocage continue.
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                window::hide_main(win.app_handle());
             }
         })
         .invoke_handler(tauri::generate_handler![

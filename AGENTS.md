@@ -9,7 +9,7 @@ Pattelock is a small desktop app built with **Tauri v2**, **Vite** and **TypeScr
 *   `npm run dev` : Starts the full development environment (Vite + Tauri Dev).
 *   `npm run build` : Builds production-ready bundles for the current platform.
 *   `npm run frontend:dev` : Runs only the Vite frontend with a fake backend (URL parameters: `?etat=pause|tout`, `?vue=reglages`, `?theme=dark`, `?langue=en`, `?plateforme=macos`).
-*   `npm run icons` : Regenerates the app and tray icons from the cat sprite.
+*   `npm run icons` : Regenerates the app and tray icons from the Pattelock paw.
 *   `npm run demo:build` : Regenerates `docs/maquette/anim-demo.html`.
 *   **Frontend Validation & Linting**:
     *   `npm run typecheck` : Runs the TypeScript type-checker (`tsc --noEmit`).

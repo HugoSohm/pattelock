@@ -54,13 +54,17 @@ function appIcon() {
   return g;
 }
 
-// ---------- Tray : patte monochrome, pleine (blocage actif) ou en contour (pause) ----------
-// 32 x 32 px, 6 px par pixel de patte : à 16 px (Windows 100 %), 3 px par pixel, net.
-function trayIcon(active, color) {
+// ---------- Tray : patte orange cernée d'encre (actif), grise en pause ----------
+// 32 x 32 px, 6 px par pixel de patte et 2 px de liseré : à 16 px (Windows 100 %), 3 px par
+// pixel dont 1 px de liseré, net. Le liseré encre la détache d'une barre claire, la couleur
+// d'une barre sombre : une seule image convient aux deux.
+const LED_OFF = rgba("#b9b3bf");
+
+function trayIcon(fill) {
   const mask = pawMask(6);
   const g = grid(32, 32);
   const filled = (x, y) => mask[y]?.[x] === true;
-  const T = 2; // épaisseur du contour en pause (1 px une fois réduit à 16 px)
+  const T = 2;
   for (let y = 0; y < 30; y++) {
     for (let x = 0; x < 30; x++) {
       if (!filled(x, y)) continue;
@@ -73,7 +77,7 @@ function trayIcon(active, color) {
           }
         }
       }
-      if (active || !inner) g[y + 1][x + 1] = color;
+      g[y + 1][x + 1] = inner ? fill : INK;
     }
   }
   return g;
@@ -81,18 +85,7 @@ function trayIcon(active, color) {
 
 mkdirSync(join(ICONS, "tray"), { recursive: true });
 writeFileSync(join(ICONS, "app-icon.png"), encodePng(appIcon(), 32));
-
-const TRAY_VARIANTS = {
-  // Barre des tâches / barre de menus claire : patte sombre.
-  light: rgba("#1f1b24"),
-  // Barre sombre : patte claire.
-  dark: rgba("#f4f1ec"),
-  // macOS : image « template », seule l'opacité compte.
-  template: rgba("#000000"),
-};
-// Noms de fichiers : « sleep » = blocage actif, « awake » = pause (le chat de l'UI).
-for (const [variant, color] of Object.entries(TRAY_VARIANTS)) {
-  writeFileSync(join(ICONS, "tray", `sleep-${variant}.png`), encodePng(trayIcon(true, color), 1));
-  writeFileSync(join(ICONS, "tray", `awake-${variant}.png`), encodePng(trayIcon(false, color), 1));
-}
+// Comme le badge de l'app : orange quand le blocage est actif, gris en pause.
+writeFileSync(join(ICONS, "tray", "active.png"), encodePng(trayIcon(ACCENT), 1));
+writeFileSync(join(ICONS, "tray", "paused.png"), encodePng(trayIcon(LED_OFF), 1));
 console.log("icônes générées dans", ICONS);
