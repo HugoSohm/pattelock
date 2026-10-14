@@ -8,7 +8,14 @@
 
 import { isSkinId } from "../cat/skins.ts";
 import { defaultShortcut } from "../keys.ts";
-import type { AppState, GuardStatus, KeyId, Platform, ThemePref } from "../types.ts";
+import {
+  type AppState,
+  type GuardStatus,
+  KEY_IDS,
+  type KeyId,
+  type Platform,
+  type ThemePref,
+} from "../types.ts";
 import type { Backend } from "./types.ts";
 
 export function createMockBackend(): Backend {
@@ -77,6 +84,11 @@ export function createMockBackend(): Backend {
       state.blocked = state.blocked.includes(id)
         ? state.blocked.filter((k) => k !== id)
         : [...state.blocked, id];
+      emit();
+    },
+    setAllKeys: async (blocked) => {
+      if (state.mode === "all") return;
+      state.blocked = blocked ? [...KEY_IDS] : [];
       emit();
     },
     beginShortcutCapture: async () => {},

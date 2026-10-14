@@ -20,6 +20,7 @@ export function createTauriBackend(): Backend {
     catClicked: () => invoke("cat_clicked"),
     toggleLockAll: () => invoke("toggle_lock_all"),
     toggleKey: (key) => invoke("toggle_key", { key }),
+    setAllKeys: (blocked) => invoke("set_all_keys", { blocked }),
     beginShortcutCapture: () => invoke("begin_shortcut_capture"),
     endShortcutCapture: () => invoke("end_shortcut_capture"),
     setShortcut: (shortcut) => invoke("set_shortcut", { shortcut }),

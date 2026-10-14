@@ -20,6 +20,8 @@ export interface Backend {
   /** Bouton « Verrouiller / Déverrouiller tout le clavier ». */
   toggleLockAll(): Promise<void>;
   toggleKey(id: KeyId): Promise<void>;
+  /** Coche ou décoche toutes les touches de la bande. */
+  setAllKeys(blocked: boolean): Promise<void>;
 
   /** Suspend le raccourci global pendant l'enregistrement d'un nouveau. */
   beginShortcutCapture(): Promise<void>;

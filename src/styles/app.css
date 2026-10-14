@@ -335,8 +335,25 @@ canvas {
 }
 
 /* ---------- Légende et statistique ---------- */
-.legend {
+.legend-row {
   margin-top: 1.125rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+/* Bouton texte discret (« Tout sélectionner »), souligné en pointillés pixel. */
+.linkbtn {
+  padding: 0 0 0.125rem;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: inset 0 -0.125rem 0 0 var(--key-edge);
+}
+.linkbtn:hover {
+  box-shadow: inset 0 -0.125rem 0 0 var(--accent);
+}
+.legend {
   display: flex;
   align-items: center;
   gap: 0.875rem;

@@ -85,6 +85,7 @@ pub fn run() {
             commands::cat_clicked,
             commands::toggle_lock_all,
             commands::toggle_key,
+            commands::set_all_keys,
             commands::update_settings,
             commands::set_shortcut,
             commands::begin_shortcut_capture,

@@ -65,6 +65,7 @@ async function start(backend: Backend): Promise<void> {
     onCat: () => void backend.catClicked(),
     onLockAll: () => void backend.toggleLockAll(),
     onKey: (id) => void backend.toggleKey(id),
+    onAllKeys: (blocked) => void backend.setAllKeys(blocked),
     onChangeShortcut: () => recorder.toggle(),
   });
   main.cat.append(catCanvas.el);

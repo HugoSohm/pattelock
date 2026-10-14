@@ -1,7 +1,10 @@
 import { copyFor, counterText, keyVisual } from "../copy.ts";
 import { formatCount, type Lang, lang, t } from "../i18n.ts";
 import { keyGroups, shortcutParts } from "../keys.ts";
-import type { AppState, KeyId, Platform, ShortcutErrorCode } from "../types.ts";
+import { type AppState, KEY_IDS, type KeyId, type Platform, type ShortcutErrorCode } from "../types.ts";
+
+const KEY_COUNT = KEY_IDS.length;
+
 import { h, setText } from "./dom.ts";
 import { padlock, paw } from "./icons.ts";
 import { guardBanner, shortcutErrorText } from "./noticeView.ts";
@@ -10,6 +13,7 @@ export interface MainHandlers {
   onCat(): void;
   onLockAll(): void;
   onKey(id: KeyId): void;
+  onAllKeys(blocked: boolean): void;
   onChangeShortcut(): void;
 }
 
@@ -47,6 +51,11 @@ export function createMainView(handlers: MainHandlers): MainView {
   let builtFor: { platform: Platform; lang: Lang } | null = null;
 
   const legend = h("div", { class: "legend" });
+  // « Tout sélectionner » / « Tout désélectionner », sur la ligne de la légende.
+  const allKeys = h("button", { class: "linkbtn", attrs: { type: "button" } });
+  let allBlocked = false;
+  allKeys.addEventListener("click", () => handlers.onAllKeys(!allBlocked));
+  const legendRow = h("div", { class: "legend-row" }, legend, allKeys);
   const count = h("b");
   const countText = h("span");
   const activity = h("div", { class: "activity" }, paw(), h("span", {}, count, " ", countText));
@@ -69,7 +78,7 @@ export function createMainView(handlers: MainHandlers): MainView {
     h("div", { class: "status" }, h("div", { class: "badge" }, led, tag), title, sub),
     h("div", { class: "hint" }, paw(), hint),
     strip,
-    legend,
+    legendRow,
     activity,
     banner,
     h("div", { class: "footer" }, lockall, shortcut),
@@ -136,6 +145,9 @@ export function createMainView(handlers: MainHandlers): MainView {
     }
 
     const all = s.mode === "all";
+    allBlocked = s.blocked.length === KEY_COUNT;
+    allKeys.hidden = all;
+    setText(allKeys, allBlocked ? t("keys.deselectAll") : t("keys.selectAll"));
     lockall.setAttribute("aria-pressed", String(all));
     setText(lockLabel, all ? t("lock.off") : t("lock.on"));
     lockall.replaceChildren(padlock(all), lockLabel);

@@ -33,6 +33,12 @@ pub fn toggle_key(core: CoreState<'_>, key: BlockableKey) {
     core.toggle_key(key);
 }
 
+/// « Tout sélectionner » / « Tout désélectionner ».
+#[tauri::command]
+pub fn set_all_keys(core: CoreState<'_>, blocked: bool) {
+    core.set_all_keys(blocked);
+}
+
 #[tauri::command]
 pub fn update_settings(core: CoreState<'_>, patch: SettingsPatch) {
     core.update_settings(patch);

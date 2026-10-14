@@ -216,6 +216,23 @@ impl Core {
         self.commit();
     }
 
+    /// Coche (`true`) ou décoche toutes les touches de la bande (sans effet en mode
+    /// clavier entier).
+    pub fn set_all_keys(&self, blocked: bool) {
+        {
+            let mut inner = self.lock();
+            if inner.mode == Mode::All {
+                return;
+            }
+            inner.prefs.blocked = if blocked {
+                BlockableKey::ALL.to_vec()
+            } else {
+                Vec::new()
+            };
+        }
+        self.commit();
+    }
+
     pub fn update_settings(&self, mut patch: SettingsPatch) {
         let theme_changed = patch.theme.is_some();
         if let Some(enabled) = patch.autostart {
