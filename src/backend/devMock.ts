@@ -51,6 +51,7 @@ export function createMockBackend(): Backend {
   const emit = () => onState(structuredClone(state));
 
   return {
+    startsVisible: true,
     init: async () => structuredClone(state),
     onState: (cb) => {
       onState = cb;

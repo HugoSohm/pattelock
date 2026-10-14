@@ -2,7 +2,7 @@ import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles/app.css";
 
-import { createMockBackend } from "./backend/devMock.ts";
+import { createTauriBackend } from "./backend/tauri.ts";
 import type { Backend } from "./backend/types.ts";
 import { CatAnimator } from "./cat/catAnimator.ts";
 import { SpriteCanvas } from "./cat/render.ts";
@@ -11,17 +11,41 @@ import { applyAccent, ThemeController } from "./theme.ts";
 import type { AppState, KeyId } from "./types.ts";
 import { h } from "./ui/dom.ts";
 import { createMainView, type UiState } from "./ui/mainView.ts";
+import { createNoticeView } from "./ui/noticeView.ts";
 import { createSettingsView } from "./ui/settingsView.ts";
+import { ShortcutRecorder } from "./ui/shortcutRecorder.ts";
 import { createTitlebar } from "./ui/titlebar.ts";
+
+async function pickBackend(): Promise<Backend> {
+  if ("__TAURI_INTERNALS__" in window) return createTauriBackend();
+  if (import.meta.env.DEV) {
+    // Aperçu dans un navigateur, sans Tauri (développement uniquement).
+    const { createMockBackend } = await import("./backend/devMock.ts");
+    return createMockBackend();
+  }
+  throw new Error("Pattelock doit être lancé dans l’app.");
+}
 
 async function start(backend: Backend): Promise<void> {
   let state: AppState = await backend.init();
   const ui: UiState = { recording: false, shortcutError: null };
   let view: "main" | "settings" =
     new URLSearchParams(location.search).get("vue") === "reglages" ? "settings" : "main";
+  let started = false;
 
   const catCanvas = new SpriteCanvas(5);
   const theme = new ThemeController(() => render());
+
+  const recorder = new ShortcutRecorder({
+    save: (s) => backend.setShortcut(s),
+    begin: () => backend.beginShortcutCapture(),
+    end: () => backend.endShortcutCapture(),
+    changed: (recording, error) => {
+      ui.recording = recording;
+      ui.shortcutError = error;
+      render();
+    },
+  });
 
   const titlebar = createTitlebar({
     onSettings: () => setView("settings"),
@@ -33,16 +57,17 @@ async function start(backend: Backend): Promise<void> {
     onCat: () => void backend.catClicked(),
     onLockAll: () => void backend.toggleLockAll(),
     onKey: (id) => void backend.toggleKey(id),
-    onChangeShortcut: () => {
-      ui.recording = !ui.recording;
-      render();
-    },
+    onChangeShortcut: () => recorder.toggle(),
   });
   main.cat.append(catCanvas.el);
   const animator = new CatAnimator({ canvas: catCanvas, host: main.cat, zz: main.zz });
   const settings = createSettingsView((patch) => void backend.updateSettings(patch));
+  const notice = createNoticeView(
+    () => void backend.openAccessibilitySettings(),
+    () => void backend.openAccessibilitySettings(),
+  );
 
-  const win = h("div", { class: "win" }, titlebar.el, main.el, settings.el);
+  const win = h("div", { class: "win" }, titlebar.el, notice.el, main.el, settings.el);
   document.getElementById("app")?.replaceWith(win);
 
   function setView(v: "main" | "settings"): void {
@@ -50,23 +75,33 @@ async function start(backend: Backend): Promise<void> {
     render();
   }
 
+  /** Indique au Rust où sont les yeux du chat, pour le suivi du curseur global. */
+  function sendAnchor(): void {
+    const c = animator.eyeCenter();
+    backend.setCatAnchor({ x: c.x, y: c.y, tracking: state.mode === "off" && view === "main" });
+  }
+
   function rescale(): void {
     catCanvas.updateScale();
     document.documentElement.style.setProperty("--px", `${catCanvas.cssPx}px`);
     settings.rescale();
+    sendAnchor();
   }
 
   function render(): void {
     theme.setPref(state.settings.theme);
     applyAccent(state.settings.accent);
     const dark = theme.dark;
+    const blocked = notice.update(state.guard, state.platform);
     titlebar.setView(view);
-    main.el.hidden = view !== "main";
+    notice.el.hidden = !blocked || view !== "main";
+    main.el.hidden = blocked || view !== "main";
     settings.el.hidden = view !== "settings";
     main.update(state, ui);
     settings.update(state, dark);
     animator.setLook(skinById(state.settings.skin).palette, dark);
     animator.setMood(state.mode === "off" ? "awake" : "sleep", started);
+    if (started) sendAnchor();
   }
 
   backend.onState((s) => {
@@ -88,8 +123,8 @@ async function start(backend: Backend): Promise<void> {
     animator.react(side);
   });
 
-  // Visibilité : on coupe tout quand la fenêtre est cachée ou réduite.
-  let windowVisible = true;
+  // Visibilité : tout s'arrête quand la fenêtre est cachée ou réduite.
+  let windowVisible = backend.startsVisible;
   const syncVisibility = () => animator.setVisible(windowVisible && document.visibilityState === "visible");
   document.addEventListener("visibilitychange", syncVisibility);
   backend.onWindowVisibility((v) => {
@@ -97,7 +132,7 @@ async function start(backend: Backend): Promise<void> {
     syncVisibility();
   });
 
-  // Les yeux suivent le curseur dans la fenêtre, et hors de la fenêtre si le Rust le fournit.
+  // Les yeux suivent le curseur dans la fenêtre, et au-delà si le Rust le fournit.
   document.addEventListener("mousemove", (e) => {
     const c = animator.eyeCenter();
     animator.setPointer(e.clientX - c.x, e.clientY - c.y);
@@ -108,12 +143,17 @@ async function start(backend: Backend): Promise<void> {
 
   window.addEventListener("resize", rescale);
 
-  let started = false;
   rescale();
   render();
   syncVisibility();
   started = true;
-  await backend.uiReady();
+  sendAnchor();
+  // Pas de requestAnimationFrame ici : il ne tourne pas tant que la fenêtre est cachée.
+  setTimeout(() => void backend.uiReady(), 0);
 }
 
-void start(createMockBackend());
+pickBackend()
+  .then(start)
+  .catch((e: unknown) => {
+    console.error(e);
+  });

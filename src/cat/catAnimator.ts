@@ -451,7 +451,8 @@ export class CatAnimator {
       el.hidden = k === last;
       el.style.opacity = k >= last - 2 ? (k === last - 2 ? "0.66" : "0.33") : "1";
       const x = k * step + (wobble[k % 4] ?? 0) * step;
-      el.style.transform = `translate(${x}px, ${-k * step}px)`;
+      // Monte de 2 px trois paliers sur quatre : la montée reste sous l'indice.
+      el.style.transform = `translate(${x}px, ${-Math.floor((k * 3) / 4) * step}px)`;
     });
   }
 }

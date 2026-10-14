@@ -2,6 +2,8 @@ import type { AppState, KeyId, KeyIntercepted, Settings, Shortcut } from "../typ
 
 /** Tout ce que l'UI demande au cœur de l'app (le Rust). L'état fait foi côté Rust. */
 export interface Backend {
+  /** La fenêtre est-elle visible dès le départ ? (Dans l'app, elle s'affiche après le premier rendu.) */
+  startsVisible: boolean;
   /** État initial. */
   init(): Promise<AppState>;
   onState(cb: (s: AppState) => void): void;

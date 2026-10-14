@@ -30,6 +30,8 @@ export interface Shortcut {
   shift: boolean;
   meta: boolean;
   key: string;
+  /** Libellé de la touche sur le clavier de l'utilisateur (AZERTY...), s'il est connu. */
+  label?: string;
 }
 
 export type ThemePref = "system" | "light" | "dark";

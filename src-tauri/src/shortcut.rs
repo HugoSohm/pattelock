@@ -1,0 +1,219 @@
+//! Raccourci global on/off : représentation, validation et conversion.
+
+use serde::{Deserialize, Serialize};
+
+use crate::keyguard::keys::{
+    evdev_code, macos_shortcut_keycode, windows_scancode, BLOCKABLE_CODES,
+};
+
+/// Combinaison de touches. `key` est un `KeyboardEvent.code` (position physique),
+/// `label` le libellé de la touche sur le clavier de l'utilisateur, s'il est connu.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Shortcut {
+    pub ctrl: bool,
+    pub alt: bool,
+    pub shift: bool,
+    pub meta: bool,
+    pub key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+}
+
+impl Default for Shortcut {
+    /// `Ctrl+Alt+K` sur Windows et Linux, `Cmd+Option+K` sur macOS.
+    fn default() -> Self {
+        let mac = cfg!(target_os = "macos");
+        Self {
+            ctrl: !mac,
+            alt: true,
+            shift: false,
+            meta: mac,
+            key: "KeyK".into(),
+            label: None,
+        }
+    }
+}
+
+const MODIFIER_CODES: [&str; 10] = [
+    "ControlLeft",
+    "ControlRight",
+    "AltLeft",
+    "AltRight",
+    "ShiftLeft",
+    "ShiftRight",
+    "MetaLeft",
+    "MetaRight",
+    "OSLeft",
+    "OSRight",
+];
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ShortcutError {
+    MissingKey,
+    MissingModifier,
+    Blockable,
+    Unsupported,
+    /// Le système (ou une autre app) utilise déjà cette combinaison.
+    Taken,
+}
+
+impl ShortcutError {
+    /// Message affiché dans l'UI.
+    pub fn message(&self) -> String {
+        let mods = if cfg!(target_os = "macos") {
+            "Ctrl, Option ou Cmd"
+        } else {
+            "Ctrl ou Alt"
+        };
+        match self {
+            Self::MissingKey => "Ajoute une touche aux modificateurs.".into(),
+            Self::MissingModifier => {
+                format!("Ajoute {mods} : une touche seule pourrait être pressée par le chat.")
+            }
+            Self::Blockable => "Cette touche peut être bloquée, choisis-en une autre.".into(),
+            Self::Unsupported => "Cette touche n’est pas prise en charge.".into(),
+            Self::Taken => "Cette combinaison est déjà prise par le système.".into(),
+        }
+    }
+}
+
+impl Shortcut {
+    pub fn validate(&self) -> Result<(), ShortcutError> {
+        if self.key.is_empty() || MODIFIER_CODES.contains(&self.key.as_str()) {
+            return Err(ShortcutError::MissingKey);
+        }
+        if BLOCKABLE_CODES.contains(&self.key.as_str()) {
+            return Err(ShortcutError::Blockable);
+        }
+        if !(self.ctrl || self.alt || self.meta) {
+            return Err(ShortcutError::MissingModifier);
+        }
+        let supported = windows_scancode(&self.key).is_some()
+            && macos_shortcut_keycode(&self.key).is_some()
+            && evdev_code(&self.key).is_some();
+        if !supported {
+            return Err(ShortcutError::Unsupported);
+        }
+        Ok(())
+    }
+
+    /// Chaîne attendue par le plugin global-shortcut (ex. `control+alt+KeyK`).
+    pub fn accelerator(&self) -> String {
+        let mut parts: Vec<&str> = Vec::new();
+        if self.ctrl {
+            parts.push("control");
+        }
+        if self.alt {
+            parts.push("alt");
+        }
+        if self.shift {
+            parts.push("shift");
+        }
+        if self.meta {
+            parts.push("super");
+        }
+        parts.push(&self.key);
+        parts.join("+")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sc(ctrl: bool, alt: bool, shift: bool, meta: bool, key: &str) -> Shortcut {
+        Shortcut {
+            ctrl,
+            alt,
+            shift,
+            meta,
+            key: key.into(),
+            label: None,
+        }
+    }
+
+    #[test]
+    fn default_is_valid_and_platform_specific() {
+        let d = Shortcut::default();
+        assert_eq!(d.validate(), Ok(()));
+        assert_eq!(d.key, "KeyK");
+        assert!(d.alt);
+        if cfg!(target_os = "macos") {
+            assert!(d.meta && !d.ctrl);
+            assert_eq!(d.accelerator(), "alt+super+KeyK");
+        } else {
+            assert!(d.ctrl && !d.meta);
+            assert_eq!(d.accelerator(), "control+alt+KeyK");
+        }
+    }
+
+    #[test]
+    fn rejects_blockable_keys() {
+        for key in [
+            "F1",
+            "F5",
+            "F12",
+            "F13",
+            "PrintScreen",
+            "ScrollLock",
+            "Pause",
+        ] {
+            assert_eq!(
+                sc(true, true, false, false, key).validate(),
+                Err(ShortcutError::Blockable),
+                "{key}"
+            );
+        }
+    }
+
+    #[test]
+    fn requires_a_real_modifier() {
+        assert_eq!(
+            sc(false, false, false, false, "KeyK").validate(),
+            Err(ShortcutError::MissingModifier)
+        );
+        assert_eq!(
+            sc(false, false, true, false, "KeyK").validate(),
+            Err(ShortcutError::MissingModifier)
+        );
+        assert_eq!(sc(false, true, true, false, "KeyK").validate(), Ok(()));
+    }
+
+    #[test]
+    fn requires_a_main_key() {
+        assert_eq!(
+            sc(true, true, false, false, "AltLeft").validate(),
+            Err(ShortcutError::MissingKey)
+        );
+        assert_eq!(
+            sc(true, true, false, false, "").validate(),
+            Err(ShortcutError::MissingKey)
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_keys() {
+        assert_eq!(
+            sc(true, true, false, false, "MediaPlayPause").validate(),
+            Err(ShortcutError::Unsupported)
+        );
+    }
+
+    #[test]
+    fn accelerator_lists_all_modifiers() {
+        assert_eq!(
+            sc(true, true, true, true, "Digit1").accelerator(),
+            "control+alt+shift+super+Digit1"
+        );
+    }
+
+    #[test]
+    fn json_shape_matches_front() {
+        let json = serde_json::to_value(sc(true, true, false, false, "KeyK")).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({"ctrl": true, "alt": true, "shift": false, "meta": false, "key": "KeyK"})
+        );
+    }
+}

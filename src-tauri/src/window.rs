@@ -5,9 +5,21 @@
 //! (760 x 584). Les calculs se font en tailles logiques, puis sont convertis en pixels
 //! physiques avec le facteur d'échelle du moniteur visé.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
-use tauri::{Manager, Monitor, PhysicalPosition, PhysicalSize, Runtime, Window, WindowEvent};
+use tauri::window::Color;
+use tauri::{
+    AppHandle, Manager, Monitor, PhysicalPosition, PhysicalSize, Runtime, Theme, WebviewUrl,
+    WebviewWindow, WebviewWindowBuilder, Window, WindowEvent,
+};
+
+use crate::cursor::CursorFollow;
+use crate::settings::ThemePref;
+
+pub const MAIN: &str = "main";
+const BG_LIGHT: Color = Color(0xfb, 0xfa, 0xf7, 0xff);
+const BG_DARK: Color = Color(0x1c, 0x1a, 0x21, 0xff);
 
 /// Ratio largeur / hauteur de la maquette (760 x 584).
 pub const RATIO: f64 = 760.0 / 584.0;
@@ -151,17 +163,107 @@ fn fit<R: Runtime>(window: &Window<R>, recenter: bool) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Dimensionne, centre puis affiche la fenêtre (créée avec `visible: false`).
-pub fn fit_and_show<R: Runtime>(window: &Window<R>) -> tauri::Result<()> {
-    if let Err(e) = fit(window, true) {
+fn window_theme(pref: ThemePref) -> Option<Theme> {
+    match pref {
+        ThemePref::System => None,
+        ThemePref::Light => Some(Theme::Light),
+        ThemePref::Dark => Some(Theme::Dark),
+    }
+}
+
+fn background(theme: Theme) -> Color {
+    if theme == Theme::Dark {
+        BG_DARK
+    } else {
+        BG_LIGHT
+    }
+}
+
+/// Crée la fenêtre principale, invisible, avec le thème déjà appliqué (pas de flash
+/// clair au lancement en mode sombre), puis la dimensionne et la centre.
+pub fn create_main(app: &AppHandle, theme: ThemePref) -> tauri::Result<WebviewWindow> {
+    let mut builder = WebviewWindowBuilder::new(app, MAIN, WebviewUrl::App("index.html".into()))
+        .title("Pattelock")
+        .inner_size(760.0, 584.0)
+        .visible(false)
+        .decorations(false)
+        .resizable(false)
+        .maximizable(false)
+        .shadow(true)
+        .theme(window_theme(theme));
+    // En mode « Système », on ne connaît le thème de l'OS qu'une fois la fenêtre créée.
+    if theme != ThemePref::System {
+        builder = builder.background_color(background(window_theme(theme).unwrap_or(Theme::Light)));
+    }
+    let window = builder.build()?;
+    if theme == ThemePref::System {
+        let resolved = window.theme().unwrap_or(Theme::Light);
+        let _ = window.set_background_color(Some(background(resolved)));
+    }
+    if let Err(e) = fit(&window.as_ref().window(), true) {
         log::error!("calcul de la taille de fenêtre impossible : {e}");
     }
-    window.show()?;
-    window.set_focus()
+    Ok(window)
+}
+
+/// Applique le thème choisi à la fenêtre (le front suit via `prefers-color-scheme`).
+pub fn apply_theme(app: &AppHandle, pref: ThemePref) {
+    let Some(window) = app.get_webview_window(MAIN) else {
+        return;
+    };
+    let _ = window.set_theme(window_theme(pref));
+    let resolved = window.theme().unwrap_or(Theme::Light);
+    let _ = window.set_background_color(Some(background(resolved)));
+}
+
+/// La fenêtre a-t-elle déjà été affichée une fois ?
+static SHOWN: AtomicBool = AtomicBool::new(false);
+
+/// Affiche la fenêtre principale au premier plan.
+pub fn show_main(app: &AppHandle) {
+    let Some(window) = app.get_webview_window(MAIN) else {
+        return;
+    };
+    SHOWN.store(true, Ordering::Release);
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+    report_visibility(&window.as_ref().window());
+}
+
+/// Affiche la fenêtre au premier lancement, sauf si on a déjà fait autrement.
+pub fn show_main_once(app: &AppHandle) {
+    if !SHOWN.load(Ordering::Acquire) {
+        show_main(app);
+    }
+}
+
+/// Note que la fenêtre ne doit pas s'afficher toute seule (lancement au démarrage).
+pub fn keep_hidden() {
+    SHOWN.store(true, Ordering::Release);
+}
+
+pub fn hide_main(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window(MAIN) {
+        let _ = window.hide();
+        report_visibility(&window.as_ref().window());
+    }
+}
+
+/// Prévient le reste de l'app quand la fenêtre est cachée, réduite ou réaffichée.
+pub fn report_visibility<R: Runtime>(window: &Window<R>) {
+    let visible = window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(false);
+    let app = window.app_handle();
+    if let Some(follow) = app.try_state::<CursorFollow>() {
+        follow.set_visible(app, visible);
+    }
 }
 
 /// Recalcule la taille quand la fenêtre change d'écran ou de DPI.
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
+    if matches!(event, WindowEvent::Resized(_) | WindowEvent::Focused(_)) {
+        report_visibility(window);
+    }
     let changed = match event {
         WindowEvent::ScaleFactorChanged { .. } => true,
         WindowEvent::Moved(_) => monitor_changed(window),

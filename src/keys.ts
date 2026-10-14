@@ -124,7 +124,7 @@ export function shortcutParts(s: Shortcut, platform: Platform): string[] {
     if (s.shift) parts.push("Maj");
     if (s.meta) parts.push(platform === "windows" ? "Win" : "Super");
   }
-  parts.push(codeLabel(s.key));
+  parts.push(s.label ?? codeLabel(s.key));
   return parts;
 }
 

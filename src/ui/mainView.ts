@@ -3,6 +3,7 @@ import { keyGroups, shortcutParts } from "../keys.ts";
 import type { AppState, KeyId, Platform } from "../types.ts";
 import { h, setText } from "./dom.ts";
 import { padlock, paw } from "./icons.ts";
+import { guardBanner } from "./noticeView.ts";
 
 export interface MainHandlers {
   onCat(): void;
@@ -34,6 +35,7 @@ export function createMainView(handlers: MainHandlers): MainView {
   const title = h("h1", { class: "title" });
   const sub = h("p", { class: "sub" });
   const hint = h("span");
+  const banner = h("p", { class: "banner", attrs: { role: "status" } });
 
   const cat = h("button", { class: "cat", attrs: { type: "button" } });
   cat.addEventListener("click", () => handlers.onCat());
@@ -67,6 +69,7 @@ export function createMainView(handlers: MainHandlers): MainView {
     strip,
     legend,
     activity,
+    banner,
     h("div", { class: "footer" }, lockall, shortcut),
   );
 
@@ -105,6 +108,9 @@ export function createMainView(handlers: MainHandlers): MainView {
     setText(title, c.title);
     setText(sub, c.sub);
     setText(hint, c.hint);
+    const warn = guardBanner(s.guard);
+    banner.hidden = warn === null;
+    setText(banner, warn ?? "");
     cat.setAttribute("aria-pressed", String(c.on));
     cat.setAttribute("aria-label", c.catLabel);
 

@@ -10,21 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "Pattelock",
-        "width": 760,
-        "height": 584,
-        "visible": false,
-        "center": false,
-        "decorations": false,
-        "resizable": false,
-        "maximizable": false,
-        "shadow": true,
-        "backgroundColor": "#fbfaf7"
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
       "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420 ws://localhost:1421; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
