@@ -84,6 +84,7 @@ const fr = {
   "update.installing": "Installation de la mise à jour…",
   "update.failed": "La mise à jour a échoué.",
   "update.retry": "Réessayer",
+  "update.dismiss": "Masquer",
   // Permissions et état du blocage
   "notice.ax.title": "Pattelock a besoin de l’Accessibilité",
   "notice.ax.text":
@@ -222,6 +223,7 @@ const en: Record<TextKey, string> = {
   "update.installing": "Installing the update…",
   "update.failed": "The update failed.",
   "update.retry": "Try again",
+  "update.dismiss": "Dismiss",
   "notice.ax.title": "Pattelock needs Accessibility",
   "notice.ax.text":
     "To block keys, macOS must allow Pattelock in System Settings, Privacy & Security, Accessibility. Check Pattelock in the list, then come back here.",

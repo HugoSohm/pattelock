@@ -6,7 +6,7 @@ import { type AppState, KEY_IDS, type KeyId, type Platform, type ShortcutErrorCo
 const KEY_COUNT = KEY_IDS.length;
 
 import { h, setText } from "./dom.ts";
-import { padlock, paw } from "./icons.ts";
+import { close, padlock, paw } from "./icons.ts";
 import { guardBanner, shortcutErrorText } from "./noticeView.ts";
 
 export interface MainHandlers {
@@ -62,16 +62,26 @@ export function createMainView(handlers: MainHandlers): MainView {
   const countText = h("span");
   const activity = h("div", { class: "activity" }, paw(), h("span", {}, count, " ", countText));
 
-  // Mise à jour disponible : un texte et un bouton, sous le compteur.
+  // Mise à jour : notification flottante en haut au centre, hors du flux de la page.
+  // On peut la masquer pour la version proposée (état d’interface, non mémorisé).
   const updateText = h("span");
   const updateBtn = h("button", { class: "change", attrs: { type: "button" } });
   updateBtn.addEventListener("click", () => handlers.onInstallUpdate());
+  const updateClose = h("button", { class: "toast-close", attrs: { type: "button" } }, close());
+  let dismissedUpdate: string | null = null;
+  let lastState: AppState | null = null;
+  updateClose.addEventListener("click", () => {
+    const u = lastState?.update;
+    if (u) dismissedUpdate = `${u.version}:${u.status}`;
+    if (lastState) renderUpdate(lastState);
+  });
   const updateBar = h(
     "div",
     { class: "update-bar", attrs: { role: "status" } },
     paw(),
     updateText,
     updateBtn,
+    updateClose,
   );
 
   const lockLabel = h("span");
@@ -205,9 +215,12 @@ export function createMainView(handlers: MainHandlers): MainView {
   }
 
   function renderUpdate(s: AppState): void {
+    lastState = s;
     const u = s.update;
-    updateBar.hidden = u === null;
+    updateBar.hidden = u === null || dismissedUpdate === `${u.version}:${u.status}`;
     if (!u) return;
+    updateClose.setAttribute("aria-label", t("update.dismiss"));
+    updateClose.title = t("update.dismiss");
     updateBar.classList.toggle("failed", u.status === "failed");
     switch (u.status) {
       case "available":
@@ -230,7 +243,9 @@ export function createMainView(handlers: MainHandlers): MainView {
         setText(updateBtn, t("update.retry"));
         break;
     }
-    updateBtn.hidden = u.status === "downloading" || u.status === "installing";
+    const busy = u.status === "downloading" || u.status === "installing";
+    updateBtn.hidden = busy;
+    updateClose.hidden = busy;
   }
 
   function setTotal(total: number): void {
