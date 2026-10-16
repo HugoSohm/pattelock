@@ -210,6 +210,11 @@ canvas {
   width: 0.625rem;
   height: 0.625rem;
 }
+/* Écran d'avertissement (permissions) : sans taille, le SVG prend toute la largeur. */
+.notice .paw {
+  width: 2.5rem;
+  height: 2.5rem;
+}
 
 /* ---------- Bande clavier et chat ---------- */
 .strip {
