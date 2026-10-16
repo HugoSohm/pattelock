@@ -94,9 +94,11 @@ impl Shortcut {
     /// Touche transmise au plugin. Sous Windows et X11, le plugin traduit `KeyQ` selon la
     /// disposition (caractère Q), alors que le hook raisonne en position physique : on
     /// lui passe donc le caractère réellement imprimé sur la touche (`A` sur la position
-    /// `KeyQ` d'un AZERTY). Le Mac travaille déjà en positions physiques.
+    /// `KeyQ` d'un AZERTY). Le Mac travaille déjà en positions physiques. Le pavé numérique
+    /// et les autres touches ne dépendent pas de la disposition : on garde leur code.
     pub fn plugin_key(&self, mac: bool) -> String {
-        if !mac {
+        let main_block = self.key.starts_with("Key") || self.key.starts_with("Digit");
+        if !mac && main_block {
             if let Some(c) = self.label.as_deref().and_then(single_char) {
                 if c.is_ascii_alphabetic() {
                     return format!("Key{}", c.to_ascii_uppercase());
@@ -251,6 +253,10 @@ mod tests {
         s.key = "Digit2".into();
         s.label = Some("É".into());
         assert_eq!(s.plugin_key(false), "Digit2");
+        // Pavé numérique : le libellé « 5 » ne doit pas devenir la touche 5 du haut.
+        s.key = "Numpad5".into();
+        s.label = Some("5".into());
+        assert_eq!(s.plugin_key(false), "Numpad5");
     }
 
     #[test]

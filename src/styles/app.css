@@ -466,10 +466,14 @@ canvas {
 kbd {
   font-family: inherit;
   font-size: 0.8125rem;
+  line-height: 1rem;
   padding: 0.1875rem 0.4375rem 0.3125rem;
   background: var(--kbd);
   color: var(--ink);
   box-shadow: inset 0 -0.1875rem 0 0 var(--key-edge);
+}
+kbd.sym {
+  font-family: "Silkscreen", monospace;
 }
 .change {
   height: 2rem;

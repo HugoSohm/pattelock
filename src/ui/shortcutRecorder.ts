@@ -1,4 +1,4 @@
-import { BLOCKABLE_CODES, MODIFIER_CODES } from "../keys.ts";
+import { BLOCKABLE_CODES, charLabel, isLayoutCode, MODIFIER_CODES } from "../keys.ts";
 import type { Shortcut, ShortcutErrorCode } from "../types.ts";
 
 export interface RecorderHandlers {
@@ -71,14 +71,44 @@ export class ShortcutRecorder {
       meta: e.metaKey,
       key: e.code,
     };
-    // Caractère imprimé sur la touche (A sur la position Q d'un AZERTY). Les autres
-    // touches (Espace, flèches...) sont nommées à l'affichage, dans la langue courante.
-    if (e.key.length === 1 && e.key.trim()) shortcut.label = e.key.toUpperCase();
-    void this.h
-      .save(shortcut)
+    void keyLabel(e)
+      .then((label) => {
+        if (label) shortcut.label = label;
+        return this.h.save(shortcut);
+      })
       .then(() => this.stop(null))
       .catch((err: unknown) => this.stop(isErrorCode(err) ? err : "refused"));
   }
+}
+
+interface LayoutMap {
+  get(code: string): string | undefined;
+}
+
+/** Keyboard Map API : absente de lib.dom, disponible dans WebView2 (Windows) seulement. */
+interface NavigatorWithKeyboard {
+  keyboard?: { getLayoutMap(): Promise<LayoutMap> };
+}
+
+/**
+ * Caractère imprimé sur la touche dans la disposition de l'utilisateur (A sur la position
+ * Q d'un AZERTY). Les autres touches (Espace, flèches, chiffres...) sont nommées à
+ * l'affichage, dans la langue courante.
+ */
+async function keyLabel(e: KeyboardEvent): Promise<string | undefined> {
+  if (!isLayoutCode(e.code)) return undefined;
+  const typed = e.key;
+  const alt = e.altKey;
+  // La carte donne le caractère sans modificateur : * et non µ (Maj + *) sur un AZERTY,
+  // E et non € (AltGr, soit Ctrl + Alt, + E).
+  const keyboard = (navigator as NavigatorWithKeyboard).keyboard;
+  const map = await keyboard?.getLayoutMap().catch(() => undefined);
+  const base = map?.get(e.code);
+  if (base) return charLabel(base);
+  // Sans la carte, `key` subit les modificateurs. Option (Mac) compose des symboles qui
+  // ne sont pas sur la touche : on ne garde alors que les lettres.
+  if (alt && !/^[a-z]$/i.test(typed)) return undefined;
+  return charLabel(typed);
 }
 
 const ERROR_CODES: readonly ShortcutErrorCode[] = [

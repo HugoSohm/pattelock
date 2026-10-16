@@ -200,7 +200,10 @@ export function createMainView(handlers: MainHandlers): MainView {
           h("span", { class: "recording", attrs: { role: "status" }, text: t("shortcut.recording") }),
         );
       } else {
-        nodes.push(...parts.map((p) => h("kbd", { text: p })));
+        // Pixelify Sans dessine certains symboles (* ^ ¨...) minuscules : Silkscreen les dessine lisibles.
+        nodes.push(
+          ...parts.map((p) => h("kbd", { text: p, class: /^[^\p{L}\p{N}]$/u.test(p) ? "sym" : "" })),
+        );
       }
       setText(change, ui.recording ? t("shortcut.cancel") : t("shortcut.change"));
       change.disabled = all;

@@ -112,6 +112,25 @@ const SYMBOLS: Record<string, string> = {
   Slash: "/",
 };
 
+/**
+ * Touches dont le caractère dépend de la disposition (A sur la position Q d'un AZERTY,
+ * * sur la position \ ...). Les chiffres restent nommés par leur code : ils sont imprimés
+ * sur la touche quelle que soit la disposition.
+ */
+export function isLayoutCode(code: string): boolean {
+  return /^Key[A-Z]$/.test(code) || code in SYMBOLS;
+}
+
+/**
+ * Libellé d'un caractère tapé, en majuscule quand la conversion garde le même caractère
+ * (« µ » deviendrait le mu grec « Μ », « ß » deviendrait « SS »).
+ */
+export function charLabel(c: string): string | undefined {
+  if (c.length !== 1 || !c.trim()) return undefined;
+  const up = c.toUpperCase();
+  return up.length === 1 && up.toLowerCase() === c ? up : c;
+}
+
 /** Libellé d'une touche à partir de son `KeyboardEvent.code`, dans la langue courante. */
 export function codeLabel(code: string): string {
   if (code.startsWith("Key")) return code.slice(3);
