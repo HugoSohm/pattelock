@@ -87,13 +87,22 @@ jobs:
             arch: x64
             os_name: "Windows (x64)"
             args: "--bundles nsis"
+            target: x86_64-pc-windows-msvc
           - platform: windows-latest-arm64
             real_platform: windows-latest
             arch: arm64
             os_name: "Windows (ARM64)"
             args: "--target aarch64-pc-windows-msvc --bundles nsis"
+            target: aarch64-pc-windows-msvc
 
     runs-on: ${{ matrix.real_platform }}
+    env:
+      # Signature Authenticode via SignPath, active dès que la variable de dépôt
+      # SIGNPATH_ORGANIZATION_ID existe (voir .signpath/README.md).
+      SIGN_WINDOWS: ${{ matrix.real_platform == 'windows-latest' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
+      # Signature des mises à jour (clé générée par « tauri signer generate »).
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v6
 
@@ -124,14 +133,86 @@ jobs:
         run: npm ci
 
       - name: build and bundle
+        if: env.SIGN_WINDOWS != 'true'
         uses: tauri-apps/tauri-action@v0
-        env:
-          # Signature des mises à jour (clé générée par « tauri signer generate »).
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           # tauri.release.conf.json active les artefacts signés de l'updater.
           args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
+
+      # Windows signé : l'exe doit être signé avant d'être emballé dans l'installeur,
+      # puis l'installeur à son tour. D'où : build sans bundle, signature de l'exe,
+      # bundle NSIS, signature de l'installeur, nouvelle signature de l'updater.
+      - name: build exe (Windows, signed)
+        if: env.SIGN_WINDOWS == 'true'
+        shell: bash
+        run: |
+          npx tauri build --target ${{ matrix.target }} --no-bundle --config src-tauri/tauri.release.conf.json
+          mkdir -p signing/exe
+          cp src-tauri/target/${{ matrix.target }}/release/pattelock.exe signing/exe/
+
+      - name: upload unsigned exe
+        if: env.SIGN_WINDOWS == 'true'
+        id: unsigned-exe
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-exe-${{ matrix.arch }}
+          path: signing/exe/pattelock.exe
+
+      - name: sign exe
+        if: env.SIGN_WINDOWS == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.unsigned-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signing/exe-signed
+
+      - name: bundle installer (Windows, signed)
+        if: env.SIGN_WINDOWS == 'true'
+        shell: bash
+        run: |
+          cp signing/exe-signed/pattelock.exe src-tauri/target/${{ matrix.target }}/release/pattelock.exe
+          npx tauri bundle --target ${{ matrix.target }} --bundles nsis --config src-tauri/tauri.release.conf.json
+          mkdir -p signing/installer
+          cp src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*-setup.exe signing/installer/
+
+      - name: upload unsigned installer
+        if: env.SIGN_WINDOWS == 'true'
+        id: unsigned-installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-installer-${{ matrix.arch }}
+          path: signing/installer/*-setup.exe
+
+      - name: sign installer
+        if: env.SIGN_WINDOWS == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signing/installer-signed
+
+      - name: replace installer and its updater signature
+        if: env.SIGN_WINDOWS == 'true'
+        shell: bash
+        run: |
+          NSIS=src-tauri/target/${{ matrix.target }}/release/bundle/nsis
+          for signed in signing/installer-signed/*-setup.exe; do
+            dest="$NSIS/$(basename "$signed")"
+            cp "$signed" "$dest"
+            # La signature Authenticode modifie le fichier : le .sig de l'updater est refait.
+            rm -f "$dest.sig"
+            npx tauri signer sign --app-version "${{ needs.check-version.outputs.version }}" "$dest"
+          done
 
       - name: Package macOS DMG
         if: matrix.real_platform == 'macos-latest'

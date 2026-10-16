@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Artifact configuration SignPath, à recopier dans le projet SignPath.
+  La même configuration sert aux deux demandes du workflow de release : l'exe seul,
+  puis l'installeur NSIS. GitHub Actions envoie chaque artefact zippé.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file-set>
+      <include path="*.exe" />
+      <for-each>
+        <authenticode-sign />
+      </for-each>
+    </pe-file-set>
+  </zip-file>
+</artifact-configuration>

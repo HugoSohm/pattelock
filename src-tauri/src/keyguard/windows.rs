@@ -4,11 +4,15 @@
 //! (obligatoire pour que Windows appelle le hook). Pour avaler une touche, la procédure
 //! renvoie `LRESULT(1)` ; sinon elle passe la main à `CallNextHookEx`.
 //!
+//! Le hook n'existe que pendant un mode de blocage : en mode `Off`, il est retiré et
+//! Windows ne transmet aucune frappe à l'app. `update` réveille le thread du hook, qui
+//! l'installe ou le retire selon le mode.
+//!
 //! Le hook est retiré automatiquement par Windows si le thread ou le processus meurt.
 //! Limites : Ctrl+Alt+Suppr et Win+L restent actifs (gérés par le système), et quand une
 //! fenêtre lancée en administrateur a le focus, Windows n'appelle pas le hook.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -17,9 +21,11 @@ use std::time::Duration;
 
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExW, TranslateMessage, HC_ACTION,
-    KBDLLHOOKSTRUCT, LLKHF_EXTENDED, LLKHF_INJECTED, MSG, WH_KEYBOARD_LL, WM_KEYDOWN,
+    CallNextHookEx, DispatchMessageW, GetMessageW, PeekMessageW, PostThreadMessageW,
+    SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, HC_ACTION, HHOOK, KBDLLHOOKSTRUCT,
+    LLKHF_EXTENDED, LLKHF_INJECTED, MSG, PM_NOREMOVE, WH_KEYBOARD_LL, WM_APP, WM_KEYDOWN,
     WM_SYSKEYDOWN,
 };
 
@@ -33,9 +39,14 @@ static SHARED: OnceLock<Arc<Shared>> = OnceLock::new();
 /// En debug, `PATTELOCK_BLOCK_INJECTED=1` traite aussi les touches simulées (tests).
 static BLOCK_INJECTED: OnceLock<bool> = OnceLock::new();
 
+/// Message posté au thread du hook : le mode a changé.
+const WM_SYNC: u32 = WM_APP + 1;
+
 thread_local! {
     /// Modificateurs et touches enfoncés, vus par le hook (thread du hook uniquement).
     static KEYS: RefCell<KeyState> = RefCell::new(KeyState::default());
+    /// Hook installé (thread du hook uniquement).
+    static HOOK: Cell<Option<HHOOK>> = const { Cell::new(None) };
 }
 
 struct KeyState {
@@ -134,6 +145,8 @@ unsafe extern "system" fn hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -
 
 struct WindowsGuard {
     status: Arc<Mutex<GuardStatus>>,
+    /// Thread du hook, `None` s'il n'a pas démarré.
+    thread_id: Option<u32>,
 }
 
 impl KeyGuard for WindowsGuard {
@@ -142,6 +155,58 @@ impl KeyGuard for WindowsGuard {
             .lock()
             .map(|s| s.clone())
             .unwrap_or(GuardStatus::Starting)
+    }
+
+    fn update(&self) {
+        let Some(id) = self.thread_id else {
+            return;
+        };
+        // SAFETY : simple envoi de message à un thread qui a une file de messages.
+        if let Err(e) = unsafe { PostThreadMessageW(id, WM_SYNC, WPARAM(0), LPARAM(0)) } {
+            log::warn!("thread du hook injoignable : {e}");
+        }
+    }
+}
+
+fn set_status(status: &Mutex<GuardStatus>, value: GuardStatus) {
+    *status.lock().unwrap_or_else(|e| e.into_inner()) = value;
+}
+
+/// Installe le hook si un mode de blocage est actif, le retire sinon (thread du hook
+/// uniquement). Un échec laisse passer les touches ; il est retenté au prochain changement.
+fn sync(shared: &Shared, status: &Mutex<GuardStatus>) {
+    let wanted = shared.mode() != GuardMode::Off;
+    match (wanted, HOOK.get()) {
+        (true, None) => {
+            // Les touches enfoncées sans hook n'ont pas été vues : on repart de zéro.
+            KEYS.with_borrow_mut(|st| *st = KeyState::default());
+            // SAFETY : appels Win32 standards ; la procédure reste valide toute la vie du
+            // processus.
+            let hook = unsafe {
+                let module = GetModuleHandleW(None).ok().map(Into::into);
+                SetWindowsHookExW(WH_KEYBOARD_LL, Some(hook_proc), module, 0)
+            };
+            match hook {
+                Ok(h) => {
+                    HOOK.set(Some(h));
+                    log::info!("hook clavier installé");
+                    set_status(status, GuardStatus::Ok);
+                }
+                Err(e) => set_status(
+                    status,
+                    GuardStatus::unavailable_with(Reason::HookRefused, e),
+                ),
+            }
+        }
+        (false, Some(h)) => {
+            HOOK.set(None);
+            // SAFETY : `h` vient de SetWindowsHookExW sur ce thread et n'a pas été retiré.
+            match unsafe { UnhookWindowsHookEx(h) } {
+                Ok(()) => log::info!("hook clavier retiré"),
+                Err(e) => log::warn!("retrait du hook clavier impossible : {e}"),
+            }
+        }
+        _ => {}
     }
 }
 
@@ -153,10 +218,12 @@ pub fn start(shared: Arc<Shared>) -> Box<dyn KeyGuard> {
         log::warn!("debug : les touches simulées sont traitées comme réelles");
     }
     let _ = BLOCK_INJECTED.set(block_injected);
-    if SHARED.set(shared).is_err() {
-        *status.lock().unwrap_or_else(|e| e.into_inner()) =
-            GuardStatus::unavailable(Reason::AlreadyInstalled);
-        return Box::new(WindowsGuard { status });
+    if SHARED.set(shared.clone()).is_err() {
+        set_status(&status, GuardStatus::unavailable(Reason::AlreadyInstalled));
+        return Box::new(WindowsGuard {
+            status,
+            thread_id: None,
+        });
     }
 
     let (tx, rx) = channel();
@@ -164,43 +231,38 @@ pub fn start(shared: Arc<Shared>) -> Box<dyn KeyGuard> {
     let spawned = thread::Builder::new()
         .name("pattelock-keyguard".into())
         .spawn(move || {
-            // SAFETY : appels Win32 standards ; la procédure reste valide toute la vie du
-            // processus.
-            let hook = unsafe {
-                let module = GetModuleHandleW(None).ok().map(Into::into);
-                SetWindowsHookExW(WH_KEYBOARD_LL, Some(hook_proc), module, 0)
-            };
-            let result = match hook {
-                Ok(_) => GuardStatus::Ok,
-                Err(e) => GuardStatus::unavailable_with(Reason::HookRefused, e),
-            };
-            let installed = result == GuardStatus::Ok;
-            if let Ok(mut s) = thread_status.lock() {
-                *s = result;
-            }
-            let _ = tx.send(());
-            if !installed {
-                return;
-            }
-            // Boucle de messages : indispensable pour que le hook soit appelé.
             let mut msg = MSG::default();
+            // SAFETY : `msg` est un MSG valide possédé par ce thread. Ce premier appel crée
+            // la file de messages du thread, pour que `update` puisse y poster.
+            unsafe {
+                let _ = PeekMessageW(&mut msg, None, 0, 0, PM_NOREMOVE);
+            }
+            set_status(&thread_status, GuardStatus::Ok);
+            sync(&shared, &thread_status);
+            // SAFETY : sans effet de bord.
+            let _ = tx.send(unsafe { GetCurrentThreadId() });
+            // Boucle de messages : indispensable pour que le hook soit appelé.
             // SAFETY : `msg` est un MSG valide possédé par ce thread.
             unsafe {
                 while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+                    if msg.hwnd.is_invalid() && msg.message == WM_SYNC {
+                        sync(&shared, &thread_status);
+                        continue;
+                    }
                     let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 }
             }
         });
-    match spawned {
-        Ok(_) => {
-            let _ = rx.recv_timeout(Duration::from_secs(2));
-        }
+    let thread_id = match spawned {
+        Ok(_) => rx.recv_timeout(Duration::from_secs(2)).ok(),
         Err(e) => {
-            if let Ok(mut s) = status.lock() {
-                *s = GuardStatus::unavailable_with(Reason::ThreadFailed, e);
-            }
+            set_status(
+                &status,
+                GuardStatus::unavailable_with(Reason::ThreadFailed, e),
+            );
+            None
         }
-    }
-    Box::new(WindowsGuard { status })
+    };
+    Box::new(WindowsGuard { status, thread_id })
 }

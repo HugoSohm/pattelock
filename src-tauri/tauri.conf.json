@@ -35,6 +35,8 @@
     "category": "Utility",
     "shortDescription": "Bloque les touches que ton chat écrase",
     "copyright": "Copyright © 2026 Hugo Sohm",
+    "publisher": "Hugo Sohm",
+    "homepage": "https://github.com/HugoSohm/pattelock",
     "windows": {
       "nsis": {
         "installMode": "currentUser",
