@@ -1,4 +1,4 @@
-import { BLOCKABLE_CODES, charLabel, isLayoutCode, MODIFIER_CODES } from "../keys.ts";
+import { BLOCKABLE_CODES, charLabel, isLayoutCode, isNumpadCode, MODIFIER_CODES } from "../keys.ts";
 import type { Shortcut, ShortcutErrorCode } from "../types.ts";
 
 export interface RecorderHandlers {
@@ -60,7 +60,7 @@ export class ShortcutRecorder {
       void this.stop(null);
       return;
     }
-    if (BLOCKABLE_CODES.has(e.code)) {
+    if (BLOCKABLE_CODES.has(e.code) || isNumpadCode(e.code)) {
       void this.stop("blockable");
       return;
     }

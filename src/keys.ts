@@ -12,8 +12,9 @@ export interface KeyDef {
 
 /**
  * La bande clavier : deux rangées de groupes. En haut Échap et les touches F, en bas
- * les 3 touches spéciales et le bloc de navigation. Sur Mac, les touches spéciales sont
- * F13 à F15 et Inser est la touche Aide.
+ * les 3 touches spéciales, le bloc de navigation et le pavé numérique (une seule touche
+ * pour tout le pavé). Sur Mac, les touches spéciales sont F13 à F15 et Inser est la
+ * touche Aide.
  */
 export function keyGroups(platform: Platform): KeyDef[][][] {
   const f = (n: number): KeyDef => {
@@ -52,6 +53,7 @@ export function keyGroups(platform: Platform): KeyDef[][][] {
     ],
     [nav("Insert", mac ? "help" : "insert"), nav("Home", "home"), nav("PageUp", "pageUp")],
     [nav("Delete", "delete"), nav("End", "end"), nav("PageDown", "pageDown")],
+    [{ id: "Numpad", label: t("key.numpad"), name: t("key.numpad.name"), wide: true }],
   ];
   return [top, bottom];
 }
@@ -84,6 +86,11 @@ export const BLOCKABLE_CODES: ReadonlySet<string> = new Set([
   "End",
   "PageDown",
 ]);
+
+/** Touche du pavé numérique (`Numpad7`, `NumpadEnter`, Verr. num. ou Clear sur Mac). */
+export function isNumpadCode(code: string): boolean {
+  return code.startsWith("Numpad") || code === "NumLock";
+}
 
 export const MODIFIER_CODES: ReadonlySet<string> = new Set([
   "ControlLeft",
@@ -135,7 +142,6 @@ export function charLabel(c: string): string | undefined {
 export function codeLabel(code: string): string {
   if (code.startsWith("Key")) return code.slice(3);
   if (code.startsWith("Digit")) return code.slice(5);
-  if (code.startsWith("Numpad")) return t("code.numpad", { n: code.slice(6) });
   const key = `code.${code}`;
   if (hasText(key)) return t(key);
   return SYMBOLS[code] ?? code;

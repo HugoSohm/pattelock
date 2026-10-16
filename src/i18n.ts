@@ -129,6 +129,8 @@ const fr = {
   "key.end.name": "Fin",
   "key.pageDown": "Pg suiv",
   "key.pageDown.name": "Page suivante",
+  "key.numpad": "Pavé num",
+  "key.numpad.name": "Pavé numérique",
   "mod.shift": "Maj",
   "code.Space": "Espace",
   "code.Enter": "Entrée",
@@ -145,7 +147,6 @@ const fr = {
   "code.ArrowDown": "Bas",
   "code.ArrowLeft": "Gauche",
   "code.ArrowRight": "Droite",
-  "code.numpad": "Pavé {n}",
 };
 
 export type TextKey = keyof typeof fr;
@@ -265,6 +266,8 @@ const en: Record<TextKey, string> = {
   "key.end.name": "End",
   "key.pageDown": "PgDn",
   "key.pageDown.name": "Page Down",
+  "key.numpad": "Numpad",
+  "key.numpad.name": "Numeric keypad",
   "mod.shift": "Shift",
   "code.Space": "Space",
   "code.Enter": "Enter",
@@ -281,7 +284,6 @@ const en: Record<TextKey, string> = {
   "code.ArrowDown": "Down",
   "code.ArrowLeft": "Left",
   "code.ArrowRight": "Right",
-  "code.numpad": "Num {n}",
 };
 
 const DICTS: Record<Lang, Record<TextKey, string>> = { fr, en };

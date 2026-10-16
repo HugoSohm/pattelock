@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::keyguard::keys::{
-    evdev_code, macos_shortcut_keycode, windows_scancode, BLOCKABLE_CODES,
+    evdev_code, is_blockable_code, macos_shortcut_keycode, windows_scancode,
 };
 
 /// Combinaison de touches. `key` est un `KeyboardEvent.code` (position physique),
@@ -76,7 +76,7 @@ impl Shortcut {
         if self.key.is_empty() || MODIFIER_CODES.contains(&self.key.as_str()) {
             return Err(ShortcutError::MissingKey);
         }
-        if BLOCKABLE_CODES.contains(&self.key.as_str()) {
+        if is_blockable_code(&self.key) {
             return Err(ShortcutError::Blockable);
         }
         if !(self.ctrl || self.alt || self.meta) {
@@ -184,6 +184,9 @@ mod tests {
             "PrintScreen",
             "ScrollLock",
             "Pause",
+            "Numpad5",
+            "NumpadEnter",
+            "NumLock",
         ] {
             assert_eq!(
                 sc(true, true, false, false, key).validate(),

@@ -28,6 +28,7 @@ export const KEY_IDS = [
   "Delete",
   "End",
   "PageDown",
+  "Numpad",
 ] as const;
 export type KeyId = (typeof KEY_IDS)[number];
 

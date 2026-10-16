@@ -24,7 +24,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::combo::{windows_native, ComboEvent, ModKey, ModTracker};
-use super::keys::from_windows_vk;
+use super::keys::from_windows;
 use super::{GuardMode, GuardStatus, KeyGuard, Reason, Shared};
 
 /// État partagé lu par la procédure du hook (une seule instance par processus).
@@ -88,7 +88,7 @@ fn decide(shared: &Shared, kb: &KBDLLHOOKSTRUCT, down: bool) -> bool {
         match shared.mode() {
             GuardMode::Off => false,
             GuardMode::FKeys => {
-                let Some(key) = from_windows_vk(vk, ext) else {
+                let Some(key) = from_windows(vk, kb.scanCode as u16, ext) else {
                     return false;
                 };
                 if shared.mask() & key.bit() == 0 {
@@ -103,7 +103,7 @@ fn decide(shared: &Shared, kb: &KBDLLHOOKSTRUCT, down: bool) -> bool {
                 if combo == ComboEvent::Unlock {
                     shared.unlock_pressed();
                 } else if first_press {
-                    shared.intercepted(from_windows_vk(vk, ext));
+                    shared.intercepted(from_windows(vk, kb.scanCode as u16, ext));
                 }
                 // Tout est avalé, y compris les modificateurs (suivis ci-dessus).
                 true

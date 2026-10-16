@@ -17,7 +17,7 @@ use x11rb::rust_connection::RustConnection;
 use x11rb::CURRENT_TIME;
 
 use super::super::combo::Mods;
-use super::super::keys::{evdev_key, from_evdev_key, BlockableKey, X11_KEYCODE_OFFSET};
+use super::super::keys::{evdev_codes, from_evdev_key, X11_KEYCODE_OFFSET};
 use super::super::{GuardMode, GuardStatus, KeyGuard, Reason, Shared};
 
 /// Combinaisons capturées pour chaque touche : sans modificateur, Verr. Maj, NumLock, les deux.
@@ -30,8 +30,8 @@ fn lock_combos() -> [ModMask; 4] {
     ]
 }
 
-fn keycode(key: BlockableKey) -> u8 {
-    (evdev_key(key) + X11_KEYCODE_OFFSET) as u8
+fn keycode(evdev: u16) -> u8 {
+    (evdev + X11_KEYCODE_OFFSET) as u8
 }
 
 fn mods_of(state: KeyButMask) -> Mods {
@@ -136,10 +136,22 @@ impl X11Guard {
             GuardMode::FKeys => {
                 let mut refused = Vec::new();
                 for key in self.shared.blocked_keys() {
-                    let kc = keycode(key);
-                    if self.grab_key(kc) {
-                        grabs.keys.push(kc);
+                    // Le pavé numérique compte plusieurs touches : tout ou rien.
+                    let mut taken = Vec::new();
+                    let all = evdev_codes(key).into_iter().all(|code| {
+                        let kc = keycode(code);
+                        let ok = self.grab_key(kc);
+                        if ok {
+                            taken.push(kc);
+                        }
+                        ok
+                    });
+                    if all {
+                        grabs.keys.extend(taken);
                     } else {
+                        for kc in taken {
+                            self.ungrab_key(kc);
+                        }
                         refused.push(key);
                     }
                 }

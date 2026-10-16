@@ -13,7 +13,7 @@
 
 ---
 
-**Pattelock** is a small desktop app for **cat owners who work at a computer**. When your cat lies down on the keyboard, the keys you pick among Esc, F1 to F12, Print Screen, Scroll Lock, Pause and the Insert / Home / Page Up / Delete / End / Page Down block stop doing anything: no help page, no reload, no full screen, no screenshot. Need more? Lock the whole keyboard in one click. Your mouse keeps working.
+**Pattelock** is a small desktop app for **cat owners who work at a computer**. When your cat lies down on the keyboard, the keys you pick among Esc, F1 to F12, Print Screen, Scroll Lock, Pause and the Insert / Home / Page Up / Delete / End / Page Down block and the numeric keypad stop doing anything: no help page, no reload, no full screen, no screenshot. Need more? Lock the whole keyboard in one click. Your mouse keeps working.
 
 <div align="center">
   <img src="docs/screenshots/active-light.png" width="380" alt="Pattelock with protection on, light theme" />
@@ -22,7 +22,7 @@
 
 ### ✨ Features
 
-- 🐾 **System-wide blocking**: Esc, F1 to F12, Print Screen, Scroll Lock, Pause and the navigation block (Insert, Home, Page Up, Delete, End, Page Down) are swallowed even when Pattelock is in the background. Click a key on the strip to block or free it. The top row is blocked by default.
+- 🐾 **System-wide blocking**: Esc, F1 to F12, Print Screen, Scroll Lock, Pause the navigation block (Insert, Home, Page Up, Delete, End, Page Down) and the numeric keypad are swallowed even when Pattelock is in the background. Click a key on the strip to block or free it. The top row is blocked by default.
 - 😺 **The cat is the switch**: it sleeps while protection is on and wakes up when it's paused. Click it to toggle.
 - 🔒 **Lock the whole keyboard**: every key is ignored except the unlock shortcut. Get out with the "Unlock keyboard" button, by clicking the cat, with the shortcut or from the tray.
 - ⌨️ **Global shortcut**: `Ctrl + Alt + K` (`Cmd + Option + K` on macOS) toggles protection from anywhere. Change it with one click.

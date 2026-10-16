@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Une des 22 touches de la bande clavier.
+/// Une des 23 touches de la bande clavier. `Numpad` représente tout le pavé numérique.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum BlockableKey {
     F1,
@@ -32,10 +32,11 @@ pub enum BlockableKey {
     Delete,
     End,
     PageDown,
+    Numpad,
 }
 
 impl BlockableKey {
-    pub const ALL: [BlockableKey; 22] = [
+    pub const ALL: [BlockableKey; 23] = [
         Self::F1,
         Self::F2,
         Self::F3,
@@ -58,10 +59,12 @@ impl BlockableKey {
         Self::Delete,
         Self::End,
         Self::PageDown,
+        Self::Numpad,
     ];
 
-    /// Touches bloquées au premier lancement : la rangée du haut. Échap et le bloc de
-    /// navigation servent tout le temps, on laisse l'utilisateur les cocher lui-même.
+    /// Touches bloquées au premier lancement : la rangée du haut. Échap, le bloc de
+    /// navigation et le pavé numérique servent tout le temps, on laisse l'utilisateur les
+    /// cocher lui-même.
     pub const DEFAULT: [BlockableKey; 15] = [
         Self::F1,
         Self::F2,
@@ -113,6 +116,7 @@ impl BlockableKey {
             Self::Delete => "Delete",
             Self::End => "End",
             Self::PageDown => "PageDown",
+            Self::Numpad => "Numpad",
         }
     }
 
@@ -136,7 +140,8 @@ pub fn keys_of(mask: u32) -> Vec<BlockableKey> {
 }
 
 /// Codes `KeyboardEvent.code` des touches bloquables (et F13 à F15 sur Mac) : le
-/// raccourci ne peut pas les utiliser.
+/// raccourci ne peut pas les utiliser. Le pavé numérique est reconnu à part, voir
+/// [`is_blockable_code`].
 pub const BLOCKABLE_CODES: [&str; 25] = [
     "F1",
     "F2",
@@ -165,10 +170,16 @@ pub const BLOCKABLE_CODES: [&str; 25] = [
     "PageDown",
 ];
 
+/// Le raccourci peut-il utiliser cette touche ? Non si elle peut être bloquée.
+pub fn is_blockable_code(code: &str) -> bool {
+    BLOCKABLE_CODES.contains(&code) || code.starts_with("Numpad") || code == "NumLock"
+}
+
 // ---------------------------------------------------------------- Windows
 
 /// Virtual-key code Windows (`VK_F1`..`VK_F12`, `VK_SNAPSHOT`, `VK_SCROLL`, `VK_PAUSE`,
-/// `VK_ESCAPE`, `VK_INSERT`...).
+/// `VK_ESCAPE`, `VK_INSERT`...). Pour le pavé numérique, `VK_NUMLOCK` : le reste du pavé
+/// est reconnu par scancode ([`from_windows`]).
 #[cfg_attr(not(windows), allow(dead_code))]
 pub fn windows_vk(key: BlockableKey) -> u16 {
     match key {
@@ -182,6 +193,7 @@ pub fn windows_vk(key: BlockableKey) -> u16 {
         BlockableKey::Delete => 0x2E,
         BlockableKey::End => 0x23,
         BlockableKey::PageDown => 0x22,
+        BlockableKey::Numpad => 0x90,
         f => 0x70 + f.index() as u16,
     }
 }
@@ -195,6 +207,24 @@ pub fn from_windows_vk(vk: u32, extended: bool) -> Option<BlockableKey> {
         .into_iter()
         .find(|k| u32::from(windows_vk(*k)) == vk)
         .filter(|k| extended || !is_navigation(*k))
+}
+
+/// Touche bloquable d'un événement Windows, pavé numérique compris. Les virtual-keys du
+/// pavé changent avec Verr. num. (`VK_NUMPAD7` ou `VK_HOME`), pas ses scancodes.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn from_windows(vk: u32, scancode: u16, extended: bool) -> Option<BlockableKey> {
+    from_windows_vk(vk, extended).or_else(|| {
+        let numpad = match (scancode, extended) {
+            // 7 8 9 - 4 5 6 + 1 2 3 0 et la virgule.
+            (0x47..=0x53, false) => true,
+            // * (étendu, c'est Impr. écran).
+            (0x37, false) => true,
+            // / et Entrée du pavé (non étendus, ce sont ; et Entrée).
+            (0x35, true) | (0x1C, true) => true,
+            _ => false,
+        };
+        numpad.then_some(BlockableKey::Numpad)
+    })
 }
 
 /// Bloc Inser / Début / Pg préc / Suppr / Fin / Pg suiv.
@@ -232,16 +262,6 @@ pub fn windows_scancode(code: &str) -> Option<(u16, bool)> {
         "Period" => plain(0x34),
         "Slash" => plain(0x35),
         "Space" => plain(0x39),
-        "Numpad7" => plain(0x47),
-        "Numpad8" => plain(0x48),
-        "Numpad9" => plain(0x49),
-        "Numpad4" => plain(0x4B),
-        "Numpad5" => plain(0x4C),
-        "Numpad6" => plain(0x4D),
-        "Numpad1" => plain(0x4F),
-        "Numpad2" => plain(0x50),
-        "Numpad3" => plain(0x51),
-        "Numpad0" => plain(0x52),
         "Home" => ext(0x47),
         "ArrowUp" => ext(0x48),
         "PageUp" => ext(0x49),
@@ -286,11 +306,21 @@ pub fn macos_keycode(key: BlockableKey) -> u16 {
         BlockableKey::Delete => 0x75, // suppression vers l'avant
         BlockableKey::End => 0x77,
         BlockableKey::PageDown => 0x79,
+        BlockableKey::Numpad => 0x47, // Clear, à la place de Verr. num.
     }
 }
 
+/// Keycodes du pavé numérique Mac (`kVK_ANSI_Keypad*`, `kVK_JIS_KeypadComma`).
+const MACOS_NUMPAD: [u16; 19] = [
+    0x41, 0x43, 0x45, 0x47, 0x4B, 0x4C, 0x4E, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59,
+    0x5B, 0x5C, 0x5F,
+];
+
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn from_macos_keycode(code: u16) -> Option<BlockableKey> {
+    if MACOS_NUMPAD.contains(&code) {
+        return Some(BlockableKey::Numpad);
+    }
     BlockableKey::ALL
         .into_iter()
         .find(|k| macos_keycode(*k) == code)
@@ -351,16 +381,6 @@ pub fn macos_shortcut_keycode(code: &str) -> Option<u16> {
         "Backquote" => 0x32,
         "Backspace" => 0x33,
         "Escape" => 0x35,
-        "Numpad0" => 0x52,
-        "Numpad1" => 0x53,
-        "Numpad2" => 0x54,
-        "Numpad3" => 0x55,
-        "Numpad4" => 0x56,
-        "Numpad5" => 0x57,
-        "Numpad6" => 0x58,
-        "Numpad7" => 0x59,
-        "Numpad8" => 0x5B,
-        "Numpad9" => 0x5C,
         "Insert" => 0x72,
         "Home" => 0x73,
         "PageUp" => 0x74,
@@ -409,7 +429,8 @@ pub fn macos_function_row_keycode(code: u16) -> Option<BlockableKey> {
 
 // ---------------------------------------------------------------- Linux
 
-/// Code evdev (`KEY_F1`...) d'une touche bloquable. Sous X11, keycode = evdev + 8.
+/// Code evdev (`KEY_F1`...) d'une touche bloquable, `KEY_NUMLOCK` pour le pavé numérique
+/// (tous ses codes : [`evdev_codes`]). Sous X11, keycode = evdev + 8.
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub fn evdev_key(key: BlockableKey) -> u16 {
     match key {
@@ -425,12 +446,31 @@ pub fn evdev_key(key: BlockableKey) -> u16 {
         BlockableKey::Delete => 111,
         BlockableKey::End => 107,
         BlockableKey::PageDown => 109,
+        BlockableKey::Numpad => 69,
         f => 59 + f.index() as u16, // KEY_F1 = 59 ... KEY_F10 = 68
+    }
+}
+
+/// Codes evdev du pavé numérique : KPASTERISK, NUMLOCK, KP7 à KPDOT, KPENTER, KPSLASH,
+/// KPEQUAL, KPCOMMA.
+const EVDEV_NUMPAD: [u16; 19] = [
+    55, 69, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 96, 98, 117, 121,
+];
+
+/// Tous les codes evdev d'une touche bloquable (hors du hook : alloue).
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn evdev_codes(key: BlockableKey) -> Vec<u16> {
+    match key {
+        BlockableKey::Numpad => EVDEV_NUMPAD.to_vec(),
+        k => vec![evdev_key(k)],
     }
 }
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub fn from_evdev_key(code: u16) -> Option<BlockableKey> {
+    if EVDEV_NUMPAD.contains(&code) {
+        return Some(BlockableKey::Numpad);
+    }
     BlockableKey::ALL
         .into_iter()
         .find(|k| evdev_key(*k) == code)
@@ -498,16 +538,6 @@ pub fn evdev_code(code: &str) -> Option<u16> {
         "Period" => 52,
         "Slash" => 53,
         "Space" => 57,
-        "Numpad7" => 71,
-        "Numpad8" => 72,
-        "Numpad9" => 73,
-        "Numpad4" => 75,
-        "Numpad5" => 76,
-        "Numpad6" => 77,
-        "Numpad1" => 79,
-        "Numpad2" => 80,
-        "Numpad3" => 81,
-        "Numpad0" => 82,
         "Home" => 102,
         "ArrowUp" => 103,
         "PageUp" => 104,
@@ -542,7 +572,7 @@ mod tests {
         let mask = mask_of(&keys);
         assert_eq!(mask, 1 | (1 << 11) | (1 << 14));
         assert_eq!(keys_of(mask), keys);
-        assert_eq!(keys_of(mask_of(&BlockableKey::ALL)).len(), 22);
+        assert_eq!(keys_of(mask_of(&BlockableKey::ALL)).len(), 23);
         assert!(BlockableKey::DEFAULT
             .iter()
             .all(|k| BlockableKey::ALL.contains(k)));
@@ -567,12 +597,34 @@ mod tests {
     }
 
     #[test]
+    fn windows_numpad_follows_scancodes() {
+        let numpad = Some(BlockableKey::Numpad);
+        // Pavé 7 avec Verr. num. (VK_NUMPAD7), puis sans (VK_HOME non étendu).
+        assert_eq!(from_windows(0x67, 0x47, false), numpad);
+        assert_eq!(from_windows(0x24, 0x47, false), numpad);
+        // Le vrai Début reste Début.
+        assert_eq!(from_windows(0x24, 0x47, true), Some(BlockableKey::Home));
+        assert_eq!(from_windows(0x6A, 0x37, false), numpad); // *
+        assert_eq!(from_windows(0x6F, 0x35, true), numpad); // /
+        assert_eq!(from_windows(0x0D, 0x1C, true), numpad); // Entrée du pavé
+        assert_eq!(from_windows(0x90, 0x45, true), numpad); // Verr. num.
+                                                            // Touches voisines du clavier principal.
+        assert_eq!(
+            from_windows(0x2C, 0x37, true),
+            Some(BlockableKey::PrintScreen)
+        );
+        assert_eq!(from_windows(0x0D, 0x1C, false), None); // Entrée
+        assert_eq!(from_windows(0xBF, 0x35, false), None); // / du clavier principal
+        assert_eq!(from_windows(0x13, 0x45, false), Some(BlockableKey::Pause));
+    }
+
+    #[test]
     fn windows_scancodes() {
         assert_eq!(windows_scancode("KeyK"), Some((0x25, false)));
         assert_eq!(windows_scancode("KeyQ"), Some((0x10, false)));
         assert_eq!(windows_scancode("Digit1"), Some((0x02, false)));
         assert_eq!(windows_scancode("ArrowUp"), Some((0x48, true)));
-        assert_eq!(windows_scancode("Numpad8"), Some((0x48, false)));
+        assert_eq!(windows_scancode("Numpad8"), None);
         assert_eq!(windows_scancode("F1"), None);
     }
 
@@ -586,6 +638,9 @@ mod tests {
         for k in BlockableKey::ALL {
             assert!(seen.insert(macos_keycode(k)), "keycode en double");
             assert_eq!(from_macos_keycode(macos_keycode(k)), Some(k));
+        }
+        for code in MACOS_NUMPAD {
+            assert_eq!(from_macos_keycode(code), Some(BlockableKey::Numpad));
         }
         assert_eq!(macos_shortcut_keycode("KeyK"), Some(0x28)); // kVK_ANSI_K
         assert_eq!(macos_shortcut_keycode("F13"), None);
@@ -606,14 +661,19 @@ mod tests {
     }
 
     #[test]
-    fn evdev_codes() {
+    fn evdev_tables() {
         assert_eq!(evdev_key(BlockableKey::F1), 59);
         assert_eq!(evdev_key(BlockableKey::F10), 68);
         assert_eq!(evdev_key(BlockableKey::F11), 87);
         assert_eq!(evdev_key(BlockableKey::PrintScreen), 99);
         for k in BlockableKey::ALL {
             assert_eq!(from_evdev_key(evdev_key(k)), Some(k));
+            for code in evdev_codes(k) {
+                assert_eq!(from_evdev_key(code), Some(k));
+            }
         }
+        assert_eq!(evdev_codes(BlockableKey::Numpad).len(), 19);
+        assert_eq!(from_evdev_key(76), Some(BlockableKey::Numpad)); // KEY_KP5
         assert_eq!(evdev_code("KeyK"), Some(37));
         assert_eq!(evdev_code("KeyA"), Some(30));
         assert_eq!(evdev_code("Digit0"), Some(11));
@@ -642,7 +702,6 @@ mod tests {
             "Backquote",
             "ArrowLeft",
             "Backspace",
-            "Numpad5",
         ];
         for c in codes {
             assert!(windows_scancode(c).is_some(), "{c} Windows");
@@ -650,7 +709,11 @@ mod tests {
             assert!(evdev_code(c).is_some(), "{c} Linux");
         }
         for k in BlockableKey::ALL {
-            assert!(BLOCKABLE_CODES.contains(&k.id()), "{} absent", k.id());
+            assert!(is_blockable_code(k.id()), "{} absent", k.id());
         }
+        assert!(is_blockable_code("Numpad5"));
+        assert!(is_blockable_code("NumpadEnter"));
+        assert!(is_blockable_code("NumLock"));
+        assert!(!is_blockable_code("KeyK"));
     }
 }
