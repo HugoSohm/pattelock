@@ -1,7 +1,7 @@
 {
   "name": "pattelock",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pattelock - Let your cat nap on the keyboard: temporarily disables keys it would press",
   "author": "Hugo Sohm",
   "license": "AGPL-3.0-or-later",

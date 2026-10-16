@@ -1,6 +1,6 @@
 [package]
 name = "pattelock"
-version = "0.1.0"
+version = "0.2.0"
 description = "Pattelock: désactive temporairement des touches du clavier pour que ton chat puisse dormir dessus"
 authors = ["Hugo Sohm"]
 edition = "2021"

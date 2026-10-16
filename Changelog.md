@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - Esc and the Insert, Home, Page Up, Delete, End and Page Down keys can be blocked too. The strip now has two rows. They are not blocked by default, and they can no longer be used in the global shortcut.
 - The numeric keypad can be blocked too, with a single "Numpad" key on the strip. It is not blocked by default, and its keys can no longer be used in the global shortcut.
