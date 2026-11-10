@@ -21,6 +21,8 @@ export function createTauriBackend(): Backend {
     toggleLockAll: () => invoke("toggle_lock_all"),
     toggleKey: (key) => invoke("toggle_key", { key }),
     setAllKeys: (blocked) => invoke("set_all_keys", { blocked }),
+    addCustomKey: (key) => invoke("add_custom_key", { key }),
+    removeCustomKey: (code) => invoke("remove_custom_key", { code }),
     beginShortcutCapture: () => invoke("begin_shortcut_capture"),
     endShortcutCapture: () => invoke("end_shortcut_capture"),
     setShortcut: (shortcut) => invoke("set_shortcut", { shortcut }),

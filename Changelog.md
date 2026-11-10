@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Block any other key too: click "+ Key" under the strip and press the key (letters, digits, Space, Enter, arrows, Shift, Win, Caps Lock, AltGr...). Up to 24 added keys, removed with a click. When they don't fit on one row, a "+N" button shows the rest.
+- Keys used by the on/off shortcut cannot be added: a message explains why and lets you change the shortcut.
+
 ## 0.2.0
 
 - Esc and the Insert, Home, Page Up, Delete, End and Page Down keys can be blocked too. The strip now has two rows. They are not blocked by default, and they can no longer be used in the global shortcut.

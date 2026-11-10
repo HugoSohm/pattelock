@@ -14,6 +14,7 @@ use tauri::{AppHandle, Emitter, Manager, Wry};
 use tauri_plugin_store::{Store, StoreBuilder};
 
 use crate::counter::{Counter, Throttle};
+use crate::custom_keys::{self, CustomKey, CustomKeyError};
 use crate::keyguard::keys::{mask_of, BlockableKey};
 use crate::keyguard::{self, GuardEvent, GuardMode, GuardStatus, KeyGuard, Shared};
 use crate::settings::{
@@ -33,6 +34,7 @@ pub const EV_INTERCEPTED: &str = "key-intercepted";
 pub struct AppState {
     pub mode: Mode,
     pub blocked: Vec<BlockableKey>,
+    pub custom_keys: Vec<CustomKey>,
     pub shortcut: Shortcut,
     pub settings: SettingsView,
     pub total: u64,
@@ -106,6 +108,7 @@ impl Core {
         shared.set(
             GuardMode::from(mode),
             mask_of(&prefs.blocked),
+            &custom_keys::natives(&prefs.custom_keys),
             &prefs.shortcut,
             prefs.media_keys,
         );
@@ -144,6 +147,7 @@ impl Core {
         AppState {
             mode: inner.mode,
             blocked: p.blocked.clone(),
+            custom_keys: p.custom_keys.clone(),
             shortcut: p.shortcut.clone(),
             settings: SettingsView {
                 skin: p.skin.clone(),
@@ -160,7 +164,7 @@ impl Core {
                 .and_then(|u| u.info()),
             total: self.counter.total(),
             platform: PLATFORM,
-            guard: self.guard.status(),
+            guard: named_status(self.guard.status(), &p.custom_keys),
         }
     }
 
@@ -241,6 +245,30 @@ impl Core {
         self.commit();
     }
 
+    /// Ajoute une touche supplémentaire ; refusée avec un code si elle n'est pas valable.
+    pub fn add_custom_key(&self, key: CustomKey) -> Result<(), CustomKeyError> {
+        {
+            let mut inner = self.lock();
+            let prefs = &mut inner.prefs;
+            custom_keys::add(&mut prefs.custom_keys, key, &prefs.shortcut)?;
+        }
+        self.commit();
+        Ok(())
+    }
+
+    pub fn remove_custom_key(&self, code: &str) {
+        {
+            let mut inner = self.lock();
+            let list = &mut inner.prefs.custom_keys;
+            let before = list.len();
+            list.retain(|k| k.code != code);
+            if list.len() == before {
+                return;
+            }
+        }
+        self.commit();
+    }
+
     pub fn update_settings(&self, mut patch: SettingsPatch) {
         let theme_changed = patch.theme.is_some();
         let updates_toggled = patch.check_updates;
@@ -285,7 +313,11 @@ impl Core {
 
     pub fn set_shortcut(&self, shortcut: Shortcut) -> Result<(), ShortcutError> {
         shortcut.validate()?;
-        let old = self.prefs().shortcut;
+        let prefs = self.prefs();
+        if custom_keys::conflicts_with(&prefs.custom_keys, &shortcut) {
+            return Err(ShortcutError::CustomKey);
+        }
+        let old = prefs.shortcut;
         if self.uses_plugin && old.accelerator() != shortcut.accelerator() {
             // Refusé si le système ou une autre app utilise déjà la combinaison.
             crate::hotkey::register(&self.app, &shortcut)?;
@@ -306,6 +338,7 @@ impl Core {
         self.shared.set(
             GuardMode::from(mode),
             mask_of(&prefs.blocked),
+            &custom_keys::natives(&prefs.custom_keys),
             &prefs.shortcut,
             prefs.media_keys,
         );
@@ -334,7 +367,12 @@ impl Core {
     /// Touche avalée dans la fenêtre de l'app (voir `localGuard.ts`) : même traitement
     /// qu'une interception du hook, si le blocage est bien actif.
     pub fn local_intercept(&self, key: &str) {
-        if self.mode() != Mode::Off {
+        if self.mode() == Mode::Off {
+            return;
+        }
+        if key == keyguard::CUSTOM_ID {
+            self.shared.intercepted_custom();
+        } else {
             self.shared.intercepted(BlockableKey::from_id(key));
         }
     }
@@ -354,6 +392,23 @@ impl Core {
         if let Err(e) = result {
             log::error!("écriture du compteur impossible : {e}");
         }
+    }
+}
+
+/// Le hook signale les touches supplémentaires refusées par leur code natif : le front
+/// les reçoit par leur `KeyboardEvent.code`.
+fn named_status(status: GuardStatus, list: &[CustomKey]) -> GuardStatus {
+    match status {
+        GuardStatus::Partial {
+            unavailable,
+            custom_natives,
+            ..
+        } => GuardStatus::Partial {
+            unavailable,
+            custom: custom_keys::codes_of(list, &custom_natives),
+            custom_natives,
+        },
+        other => other,
     }
 }
 

@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::custom_keys::CustomKey;
 use crate::keyguard::keys::BlockableKey;
 use crate::shortcut::Shortcut;
 
@@ -58,6 +59,8 @@ pub enum Lang {
 pub struct Prefs {
     /// Touches sélectionnées (par défaut : toutes).
     pub blocked: Vec<BlockableKey>,
+    /// Touches supplémentaires, bloquées en plus de la bande.
+    pub custom_keys: Vec<CustomKey>,
     /// Protection active (mode F-keys) ou en pause.
     pub active: bool,
     pub shortcut: Shortcut,
@@ -76,6 +79,7 @@ impl Default for Prefs {
     fn default() -> Self {
         Self {
             blocked: BlockableKey::DEFAULT.to_vec(),
+            custom_keys: Vec::new(),
             active: true,
             shortcut: Shortcut::default(),
             skin: DEFAULT_SKIN.into(),
@@ -115,6 +119,7 @@ impl Prefs {
         if self.shortcut.validate().is_err() {
             self.shortcut = d.shortcut;
         }
+        crate::custom_keys::sanitize(&mut self.custom_keys, &self.shortcut);
         if !is_skin_id(&self.skin) {
             self.skin = d.skin;
         }
@@ -201,8 +206,13 @@ mod tests {
             ..Prefs::default()
         };
         p.shortcut.shift = true;
+        p.custom_keys.push(CustomKey {
+            code: "KeyQ".into(),
+            label: Some("A".into()),
+        });
         let v = serde_json::to_value(&p).unwrap();
         assert_eq!(v["mediaKeys"], json!(true));
+        assert_eq!(v["customKeys"], json!([{"code": "KeyQ", "label": "A"}]));
         assert_eq!(v["language"], json!("en"));
         assert_eq!(Prefs::from_json(Some(&v)), p);
     }
@@ -214,10 +224,19 @@ mod tests {
             "skin": "<script>",
             "accent": "red",
             "shortcut": { "ctrl": true, "alt": true, "shift": false, "meta": false, "key": "F5" },
-            "theme": "dark"
+            "theme": "dark",
+            "customKeys": [{"code": "KeyA"}, {"code": "F2"}, {"code": "KeyK"}]
         });
         let p = Prefs::from_json(Some(&v));
         assert_eq!(p.blocked, vec![BlockableKey::F1, BlockableKey::F3]);
+        // F2 est sur la bande, K sert au raccourci.
+        assert_eq!(
+            p.custom_keys,
+            vec![CustomKey {
+                code: "KeyA".into(),
+                label: None
+            }]
+        );
         assert_eq!(p.skin, "noir");
         assert_eq!(p.accent, "#ff9548");
         assert_eq!(p.shortcut, Shortcut::default());

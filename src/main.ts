@@ -9,7 +9,8 @@ import { SpriteCanvas } from "./cat/render.ts";
 import { skinById } from "./cat/skins.ts";
 import { type Lang, resolveLang, setLang } from "./i18n.ts";
 import { applyAccent, ThemeController } from "./theme.ts";
-import type { AppState, KeyId } from "./types.ts";
+import type { AppState } from "./types.ts";
+import { CustomKeyRecorder } from "./ui/customKeyRecorder.ts";
 import { h } from "./ui/dom.ts";
 import { installLocalGuard } from "./ui/localGuard.ts";
 import { createMainView, type UiState } from "./ui/mainView.ts";
@@ -30,7 +31,7 @@ async function pickBackend(): Promise<Backend> {
 
 async function start(backend: Backend): Promise<void> {
   let state: AppState = await backend.init();
-  const ui: UiState = { recording: false, shortcutError: null };
+  const ui: UiState = { recording: false, shortcutError: null, customRecording: false, customError: null };
   let view: "main" | "settings" =
     new URLSearchParams(location.search).get("vue") === "reglages" ? "settings" : "main";
   let started = false;
@@ -49,9 +50,19 @@ async function start(backend: Backend): Promise<void> {
     },
   });
 
+  const customRecorder = new CustomKeyRecorder({
+    save: (k) => backend.addCustomKey(k),
+    shortcut: () => state.shortcut,
+    changed: (recording, failure) => {
+      ui.customRecording = recording;
+      ui.customError = failure;
+      render();
+    },
+  });
+
   installLocalGuard(
     () => state,
-    () => recorder.active,
+    () => recorder.active || customRecorder.active,
     (key) => backend.reportLocalKey(key),
   );
 
@@ -66,8 +77,19 @@ async function start(backend: Backend): Promise<void> {
     onLockAll: () => void backend.toggleLockAll(),
     onKey: (id) => void backend.toggleKey(id),
     onAllKeys: (blocked) => void backend.setAllKeys(blocked),
+    // Un seul enregistrement à la fois : la touche pressée irait aux deux.
+    onAddCustom: () => {
+      recorder.cancel();
+      customRecorder.toggle();
+    },
+    onRemoveCustom: (code) => void backend.removeCustomKey(code),
     onInstallUpdate: () => void backend.installUpdate().catch(() => {}),
-    onChangeShortcut: () => recorder.toggle(),
+    onChangeShortcut: () => {
+      customRecorder.cancel();
+      customRecorder.dismiss();
+      recorder.toggle();
+    },
+    onDismissCustomError: () => customRecorder.dismiss(),
   });
   main.cat.append(catCanvas.el);
   const animator = new CatAnimator({ canvas: catCanvas, host: main.cat, zz: main.zz });
@@ -95,6 +117,7 @@ async function start(backend: Backend): Promise<void> {
     catCanvas.updateScale();
     document.documentElement.style.setProperty("--px", `${catCanvas.cssPx}px`);
     settings.rescale();
+    main.relayout();
     sendAnchor();
   }
 
@@ -137,7 +160,7 @@ async function start(backend: Backend): Promise<void> {
   });
   backend.onIntercept((e) => {
     // L'oreille la plus proche de la touche frémit ; hors de la bande, au hasard.
-    const key = main.keyEl(e.key as KeyId);
+    const key = main.keyEl(e.key);
     let side: "left" | "right" = e.timestamp % 2 === 0 ? "left" : "right";
     if (key) {
       const r = key.getBoundingClientRect();

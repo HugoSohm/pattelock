@@ -1,4 +1,4 @@
-import { BLOCKABLE_CODES, charLabel, isLayoutCode, isNumpadCode, MODIFIER_CODES } from "../keys.ts";
+import { charLabel, isLayoutCode, isStripCode, MODIFIER_CODES } from "../keys.ts";
 import type { Shortcut, ShortcutErrorCode } from "../types.ts";
 
 export interface RecorderHandlers {
@@ -31,6 +31,10 @@ export class ShortcutRecorder {
     else void this.start();
   }
 
+  cancel(): void {
+    if (this.recording) void this.stop(null);
+  }
+
   private async start(): Promise<void> {
     this.recording = true;
     this.setError(null);
@@ -60,7 +64,7 @@ export class ShortcutRecorder {
       void this.stop(null);
       return;
     }
-    if (BLOCKABLE_CODES.has(e.code) || isNumpadCode(e.code)) {
+    if (isStripCode(e.code)) {
       void this.stop("blockable");
       return;
     }
@@ -95,7 +99,7 @@ interface NavigatorWithKeyboard {
  * Q d'un AZERTY). Les autres touches (Espace, flèches, chiffres...) sont nommées à
  * l'affichage, dans la langue courante.
  */
-async function keyLabel(e: KeyboardEvent): Promise<string | undefined> {
+export async function keyLabel(e: KeyboardEvent): Promise<string | undefined> {
   if (!isLayoutCode(e.code)) return undefined;
   const typed = e.key;
   const alt = e.altKey;
@@ -117,6 +121,7 @@ const ERROR_CODES: readonly ShortcutErrorCode[] = [
   "blockable",
   "unsupported",
   "taken",
+  "customKey",
   "refused",
 ];
 

@@ -24,8 +24,12 @@ use std::sync::mpsc::{sync_channel, Receiver, SyncSender, TrySendError};
 
 use serde::Serialize;
 
+use crate::custom_keys::MAX_CUSTOM;
 use crate::shortcut::Shortcut;
 use crate::state::Mode;
+
+/// Identifiant envoyé au front pour une touche supplémentaire interceptée.
+pub const CUSTOM_ID: &str = "custom";
 use combo::Unlock;
 use keys::{keys_of, BlockableKey};
 
@@ -80,6 +84,12 @@ pub enum GuardStatus {
     #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Partial {
         unavailable: Vec<BlockableKey>,
+        /// Touches supplémentaires refusées, en codes natifs (remplis par le hook).
+        #[serde(skip)]
+        custom_natives: Vec<u32>,
+        /// Les mêmes en `KeyboardEvent.code` (remplis par `Core` pour le front).
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        custom: Vec<String>,
     },
 }
 
@@ -129,10 +139,16 @@ impl GuardStatus {
     }
 }
 
+/// Case vide du tableau des touches supplémentaires (aucun code natif ne vaut ça).
+const NO_KEY: u32 = u32::MAX;
+
 /// État partagé entre l'app et le hook.
 pub struct Shared {
     mode: AtomicU8,
     mask: AtomicU32,
+    /// Codes natifs des touches supplémentaires (`NO_KEY` pour les cases vides). Un
+    /// tableau fixe : le hook le parcourt sans verrou ni allocation.
+    custom: [AtomicU32; MAX_CUSTOM],
     unlock: AtomicU64,
     media_keys: AtomicBool,
     /// Un nouveau raccourci est en cours d'enregistrement : on ne le reconnaît pas.
@@ -146,6 +162,7 @@ impl Shared {
         let shared = Self {
             mode: AtomicU8::new(GuardMode::Off as u8),
             mask: AtomicU32::new(0),
+            custom: std::array::from_fn(|_| AtomicU32::new(NO_KEY)),
             unlock: AtomicU64::new(Unlock::default().pack()),
             media_keys: AtomicBool::new(true),
             capturing: AtomicBool::new(false),
@@ -176,6 +193,28 @@ impl Shared {
         self.mode() == GuardMode::FKeys && self.mask() & key.bit() != 0
     }
 
+    /// Le code natif est-il une touche supplémentaire bloquée en ce moment ? Pas pendant
+    /// l'enregistrement d'un raccourci : un modificateur avalé en serait absent.
+    pub fn blocks_custom(&self, native: u32) -> bool {
+        native != NO_KEY
+            && self.mode() == GuardMode::FKeys
+            && !self.capturing()
+            && self
+                .custom
+                .iter()
+                .any(|c| c.load(Ordering::Acquire) == native)
+    }
+
+    /// Codes natifs des touches supplémentaires (hors du hook : alloue).
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    pub fn custom_natives(&self) -> Vec<u32> {
+        self.custom
+            .iter()
+            .map(|c| c.load(Ordering::Acquire))
+            .filter(|c| *c != NO_KEY)
+            .collect()
+    }
+
     pub fn unlock(&self) -> Unlock {
         Unlock::unpack(self.unlock.load(Ordering::Acquire))
     }
@@ -185,7 +224,6 @@ impl Shared {
         self.media_keys.load(Ordering::Acquire)
     }
 
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub fn capturing(&self) -> bool {
         self.capturing.load(Ordering::Acquire)
     }
@@ -194,8 +232,18 @@ impl Shared {
         self.capturing.store(capturing, Ordering::Release);
     }
 
-    pub fn set(&self, mode: GuardMode, mask: u32, shortcut: &Shortcut, media_keys: bool) {
+    pub fn set(
+        &self,
+        mode: GuardMode,
+        mask: u32,
+        custom: &[u32],
+        shortcut: &Shortcut,
+        media_keys: bool,
+    ) {
         self.mask.store(mask, Ordering::Release);
+        for (i, slot) in self.custom.iter().enumerate() {
+            slot.store(custom.get(i).copied().unwrap_or(NO_KEY), Ordering::Release);
+        }
         self.unlock
             .store(Unlock::from_shortcut(shortcut).pack(), Ordering::Release);
         self.media_keys.store(media_keys, Ordering::Release);
@@ -208,6 +256,11 @@ impl Shared {
         self.send(GuardEvent::Intercepted {
             key: key.map_or("other", BlockableKey::id),
         });
+    }
+
+    /// Une touche supplémentaire a été avalée.
+    pub fn intercepted_custom(&self) {
+        self.send(GuardEvent::Intercepted { key: CUSTOM_ID });
     }
 
     pub fn unlock_pressed(&self) {
@@ -271,12 +324,29 @@ mod tests {
         let (s, rx) = Shared::new();
         assert_eq!(s.mode(), GuardMode::Off);
         let mask = BlockableKey::F1.bit() | BlockableKey::Pause.bit();
-        s.set(GuardMode::FKeys, mask, &Shortcut::default(), false);
+        s.set(
+            GuardMode::FKeys,
+            mask,
+            &[30, 57],
+            &Shortcut::default(),
+            false,
+        );
         assert!(s.is_blocked(BlockableKey::F1));
         assert!(!s.is_blocked(BlockableKey::F2));
         assert!(!s.media_keys());
-        s.set(GuardMode::Off, mask, &Shortcut::default(), true);
+        assert!(s.blocks_custom(30));
+        assert!(s.blocks_custom(57));
+        assert!(!s.blocks_custom(31));
+        assert!(!s.blocks_custom(NO_KEY));
+        assert_eq!(s.custom_natives(), vec![30, 57]);
+        s.set(GuardMode::Off, mask, &[30], &Shortcut::default(), true);
         assert!(!s.is_blocked(BlockableKey::F1));
+        assert!(!s.blocks_custom(30));
+        assert_eq!(s.custom_natives(), vec![30]);
+        s.set(GuardMode::FKeys, mask, &[], &Shortcut::default(), true);
+        assert!(!s.blocks_custom(30));
+        s.intercepted_custom();
+        assert_eq!(rx.try_recv(), Ok(GuardEvent::Intercepted { key: "custom" }));
 
         s.intercepted(Some(BlockableKey::F5));
         s.intercepted(None);
@@ -322,11 +392,23 @@ mod tests {
         );
         let v = serde_json::to_value(GuardStatus::Partial {
             unavailable: vec![BlockableKey::PrintScreen],
+            custom_natives: vec![30],
+            custom: Vec::new(),
         })
         .unwrap();
         assert_eq!(
             v,
             serde_json::json!({"kind": "partial", "unavailable": ["PrintScreen"]})
+        );
+        let v = serde_json::to_value(GuardStatus::Partial {
+            unavailable: Vec::new(),
+            custom_natives: vec![30],
+            custom: vec!["KeyA".into()],
+        })
+        .unwrap();
+        assert_eq!(
+            v,
+            serde_json::json!({"kind": "partial", "unavailable": [], "custom": ["KeyA"]})
         );
     }
 }

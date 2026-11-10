@@ -56,6 +56,8 @@ pub enum ShortcutError {
     Unsupported,
     /// Le système (ou une autre app) utilise déjà cette combinaison.
     Taken,
+    /// La touche fait partie des touches supplémentaires (elle serait bloquée).
+    CustomKey,
 }
 
 impl ShortcutError {
@@ -67,6 +69,7 @@ impl ShortcutError {
             Self::Blockable => "blockable",
             Self::Unsupported => "unsupported",
             Self::Taken => "taken",
+            Self::CustomKey => "customKey",
         }
     }
 }

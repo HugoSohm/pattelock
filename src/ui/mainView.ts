@@ -1,10 +1,18 @@
-import { copyFor, counterText, keyVisual } from "../copy.ts";
+import { copyFor, counterText, customVisual, keyVisual } from "../copy.ts";
 import { formatCount, type Lang, lang, t } from "../i18n.ts";
-import { keyGroups, shortcutParts } from "../keys.ts";
-import { type AppState, KEY_IDS, type KeyId, type Platform, type ShortcutErrorCode } from "../types.ts";
+import { customKeyLabel, keyGroups, modifierGroup, shortcutParts, shortcutPieces } from "../keys.ts";
+import {
+  type AppState,
+  KEY_IDS,
+  type KeyId,
+  MAX_CUSTOM_KEYS,
+  type Platform,
+  type ShortcutErrorCode,
+} from "../types.ts";
 
 const KEY_COUNT = KEY_IDS.length;
 
+import type { CustomKeyFailure } from "./customKeyRecorder.ts";
 import { h, setText } from "./dom.ts";
 import { close, padlock, paw } from "./icons.ts";
 import { guardBanner, shortcutErrorText } from "./noticeView.ts";
@@ -14,13 +22,18 @@ export interface MainHandlers {
   onLockAll(): void;
   onKey(id: KeyId): void;
   onAllKeys(blocked: boolean): void;
+  onAddCustom(): void;
+  onRemoveCustom(code: string): void;
   onInstallUpdate(): void;
   onChangeShortcut(): void;
+  onDismissCustomError(): void;
 }
 
 export interface UiState {
   recording: boolean;
   shortcutError: ShortcutErrorCode | null;
+  customRecording: boolean;
+  customError: CustomKeyFailure | null;
 }
 
 export interface MainView {
@@ -29,10 +42,12 @@ export interface MainView {
   cat: HTMLButtonElement;
   /** Les « z » du chat endormi. */
   zz: HTMLElement;
-  /** Clé de la bande pour une touche (pour orienter l'oreille du chat). */
-  keyEl(id: KeyId): HTMLButtonElement | undefined;
+  /** Élément d'une touche interceptée (`F5`, `custom`...), pour orienter l'oreille du chat. */
+  keyEl(id: string): HTMLElement | undefined;
   update(s: AppState, ui: UiState): void;
   setTotal(total: number): void;
+  /** Recalcule ce qui tient sur la rangée des touches ajoutées (taille de fenêtre changée). */
+  relayout(): void;
 }
 
 export function createMainView(handlers: MainHandlers): MainView {
@@ -58,6 +73,36 @@ export function createMainView(handlers: MainHandlers): MainView {
   let allBlocked = false;
   allKeys.addEventListener("click", () => handlers.onAllKeys(!allBlocked));
   strip.append(allKeys);
+
+  // Touches ajoutées : 3e rangée de la bande, sur une seule ligne. Ce qui ne tient pas se
+  // replie derrière « +N », qui déplie la rangée (la page défile alors si besoin).
+  const customRow = h("div", { class: "krow custom" });
+  strip.append(customRow);
+  const more = h("button", { class: "key wide more", attrs: { type: "button" } });
+  const addKey = h("button", { class: "key add", attrs: { type: "button" } });
+  const chips: HTMLButtonElement[] = [];
+  let expanded = false;
+  more.addEventListener("click", () => {
+    expanded = !expanded;
+    fit();
+  });
+  addKey.addEventListener("click", () => handlers.onAddCustom());
+  // Carte d'erreur d'une touche refusée, sous la bande.
+  const cardBody = h("div", { class: "ccard-body" });
+  const cardClose = h("button", { class: "toast-close", attrs: { type: "button" } }, close());
+  cardClose.addEventListener("click", () => handlers.onDismissCustomError());
+  const cardAction = h("button", { class: "change", attrs: { type: "button" } });
+  cardAction.addEventListener("click", () => handlers.onChangeShortcut());
+  const card = h(
+    "div",
+    { class: "ccard", attrs: { role: "alert" } },
+    h("span", { class: "ccard-ico", attrs: { "aria-hidden": "true" }, text: "!" }),
+    cardBody,
+    cardAction,
+    cardClose,
+  );
+  card.hidden = true;
+
   const count = h("b");
   const countText = h("span");
   const activity = h("div", { class: "activity" }, paw(), h("span", {}, count, " ", countText));
@@ -104,17 +149,18 @@ export function createMainView(handlers: MainHandlers): MainView {
     strip,
     // Légende et compteur sur une même ligne : la bande à deux rangées prend de la hauteur.
     h("div", { class: "meta" }, legend, activity),
+    card,
     banner,
     updateBar,
     h("div", { class: "footer" }, lockall, shortcut),
   );
 
   function buildKeys(platform: Platform): void {
-    for (const r of strip.querySelectorAll(".krow")) r.remove();
+    for (const r of strip.querySelectorAll(".krow:not(.custom)")) r.remove();
     keyEls.clear();
     for (const groups of keyGroups(platform)) {
       const row = h("div", { class: "krow" });
-      strip.append(row);
+      strip.insertBefore(row, customRow);
       for (const group of groups) {
         const g = h("div", { class: "group" });
         for (const k of group) {
@@ -148,7 +194,7 @@ export function createMainView(handlers: MainHandlers): MainView {
     setText(title, c.title);
     setText(sub, c.sub);
     setText(hint, c.hint);
-    const warn = guardBanner(s.guard, s.platform);
+    const warn = guardBanner(s.guard, s.platform, s.customKeys);
     banner.hidden = warn === null;
     setText(banner, warn ?? "");
     cat.setAttribute("aria-pressed", String(c.on));
@@ -214,7 +260,139 @@ export function createMainView(handlers: MainHandlers): MainView {
       scInfo.replaceChildren(...nodes);
     }
     renderUpdate(s);
+    renderCustom(s, ui);
     setTotal(s.total);
+  }
+
+  let lastCustom = "";
+
+  function renderCustom(s: AppState, ui: UiState): void {
+    const all = s.mode === "all";
+    const sig = JSON.stringify([s.customKeys, s.mode, lang(), ui.customRecording]);
+    if (sig !== lastCustom) {
+      lastCustom = sig;
+      const [cls, txt] = customVisual(s);
+      chips.length = 0;
+      for (const k of s.customKeys) {
+        const label = customKeyLabel(k, s.platform);
+        const action = all ? "" : `, ${t("custom.remove")}`;
+        const b = h(
+          "button",
+          {
+            class: `key wide ckey ${cls}`,
+            attrs: {
+              type: "button",
+              "aria-label": `${label}, ${txt}${action}`,
+              "aria-disabled": String(all),
+            },
+          },
+          h("span", { class: "kled", attrs: { "aria-hidden": "true" } }),
+          h("span", { class: /^[^\p{L}\p{N}]$/u.test(label) ? "sym" : "", text: label }),
+          h("span", { class: "kx", attrs: { "aria-hidden": "true" } }, close()),
+        );
+        (b.firstElementChild as HTMLElement).hidden = cls !== "s-active";
+        b.addEventListener("click", () => {
+          if (!all) handlers.onRemoveCustom(k.code);
+        });
+        chips.push(b);
+      }
+      const rec = ui.customRecording;
+      addKey.classList.toggle("recording", rec);
+      setText(addKey, rec ? t("custom.recording") : t("custom.add"));
+      addKey.setAttribute("aria-label", rec ? t("custom.cancelAria") : t("custom.addAria"));
+      // En mode clavier entier, le hook avale tout : impossible d'enregistrer une touche.
+      addKey.disabled = all;
+      addKey.hidden = s.customKeys.length >= MAX_CUSTOM_KEYS;
+      customRow.replaceChildren(...chips, more, addKey);
+    }
+    fit();
+
+    renderCard(s, ui.customError);
+  }
+
+  let lastCard = "";
+
+  /**
+   * Carte d'erreur d'une touche refusée : titre, explication qui nomme la touche, et pour
+   * un conflit avec le raccourci, le raccourci avec la touche en cause mise en évidence et
+   * un bouton pour le changer.
+   */
+  function renderCard(s: AppState, failure: CustomKeyFailure | null): void {
+    const sig = JSON.stringify([failure, s.shortcut, lang()]);
+    if (sig === lastCard) return;
+    lastCard = sig;
+    card.hidden = failure === null;
+    if (!failure) return;
+    const { error, key } = failure;
+    // Le raccourci, touche en cause mise en évidence.
+    const hit = key.code === s.shortcut.key ? "key" : modifierGroup(key.code);
+    const sc = h(
+      "span",
+      { class: "ccard-keys" },
+      ...shortcutPieces(s.shortcut, s.platform).flatMap((p, i) => {
+        const k = kbd(p.text);
+        if (p.id === hit) k.classList.add("hit");
+        return i === 0 ? [k] : [h("span", { text: "+" }), k];
+      }),
+    );
+    // Le texte est découpé autour de {key} et {sc} pour les afficher comme des touches.
+    const marks: Record<string, Node> = { "\u0000": kbd(customKeyLabel(key, s.platform)), "\u0001": sc };
+    const raw = t(`customError.${error}`, { key: "\u0000", sc: "\u0001", max: MAX_CUSTOM_KEYS });
+    const body = raw
+      .split(/([\u0000\u0001])/)
+      .map((part) => marks[part] ?? document.createTextNode(part));
+    cardBody.replaceChildren(
+      h("p", { class: "ccard-title", text: t(`customError.${error}.title`) }),
+      h("p", { class: "ccard-text" }, ...body),
+    );
+    cardAction.hidden = error !== "shortcut";
+    setText(cardAction, t("customError.changeShortcut"));
+    card.classList.toggle("shake", error === "shortcut");
+    cardClose.setAttribute("aria-label", t("customError.dismiss"));
+    cardClose.title = t("customError.dismiss");
+  }
+
+  function kbd(text: string): HTMLElement {
+    return h("kbd", { text, class: /^[^\p{L}\p{N}]$/u.test(text) ? "sym" : "" });
+  }
+
+  /** Affiche les touches ajoutées qui tiennent sur une ligne, le reste derrière « +N ». */
+  function fit(): void {
+    for (const c of chips) c.hidden = false;
+    more.hidden = false;
+    customRow.classList.remove("open");
+    // Mesure avec le libellé le plus large possible.
+    setText(more, t("custom.more", { n: chips.length }));
+    const avail = customRow.clientWidth;
+    // Vue cachée (Réglages) : on recalculera au prochain rendu.
+    if (avail === 0) return;
+    const gap = Number.parseFloat(getComputedStyle(customRow).columnGap) || 0;
+    const widths = chips.map((c) => c.offsetWidth + gap);
+    const add = addKey.hidden ? 0 : addKey.offsetWidth + gap;
+    const total = widths.reduce((a, b) => a + b, 0) + add - gap;
+    if (total <= avail) {
+      more.hidden = true;
+      expanded = false;
+      return;
+    }
+    if (expanded) {
+      customRow.classList.add("open");
+      setText(more, t("custom.less"));
+      more.setAttribute("aria-expanded", "true");
+      more.setAttribute("aria-label", t("custom.lessAria"));
+      return;
+    }
+    let used = more.offsetWidth + add;
+    let shown = 0;
+    while (shown < chips.length && used + (widths[shown] ?? 0) <= avail) {
+      used += widths[shown] ?? 0;
+      shown++;
+    }
+    for (const c of chips.slice(shown)) c.hidden = true;
+    const n = chips.length - shown;
+    setText(more, t("custom.more", { n }));
+    more.setAttribute("aria-expanded", "false");
+    more.setAttribute("aria-label", t("custom.moreAria", { n }));
   }
 
   function renderUpdate(s: AppState): void {
@@ -256,5 +434,13 @@ export function createMainView(handlers: MainHandlers): MainView {
     setText(countText, counterText(total));
   }
 
-  return { el, cat, zz, keyEl: (id) => keyEls.get(id), update, setTotal };
+  return {
+    el,
+    cat,
+    zz,
+    keyEl: (id) => (id === "custom" ? customRow : keyEls.get(id as KeyId)),
+    update,
+    setTotal,
+    relayout: fit,
+  };
 }

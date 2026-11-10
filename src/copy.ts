@@ -37,7 +37,7 @@ export function copyFor(s: AppState): Copy {
     };
   }
   if (s.mode === "fkeys") {
-    const n = s.blocked.length;
+    const n = s.blocked.length + s.customKeys.length;
     return {
       on: true,
       tag: t("tag.fkeys"),
@@ -67,6 +67,15 @@ export function copyFor(s: AppState): Copy {
 
 export function keyVisual(s: AppState, id: KeyId): [KeyVisual, string] {
   const blocked = s.blocked.includes(id);
+  return visual(s, blocked);
+}
+
+/** Une touche ajoutée est toujours choisie : son état ne dépend que du mode. */
+export function customVisual(s: AppState): [KeyVisual, string] {
+  return visual(s, true);
+}
+
+function visual(s: AppState, blocked: boolean): [KeyVisual, string] {
   if (s.mode === "all") return ["s-active", t("state.lockedAll")];
   if (s.mode === "fkeys" && blocked) return ["s-active", t("state.blocked")];
   if (blocked) return ["s-planned", t("state.planned")];

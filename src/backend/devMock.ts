@@ -4,16 +4,18 @@
  *
  * Paramètres d'URL : ?etat=pause|tout, ?theme=light|dark|system, ?pelage=roux,
  * ?plateforme=macos|linux, ?langue=fr|en, ?garde=accessibilite|input|indisponible|partiel,
- * ?maj=dispo|echec (mise à jour proposée).
+ * ?maj=dispo|echec (mise à jour proposée), ?perso=N (N touches ajoutées).
  */
 
 import { isSkinId } from "../cat/skins.ts";
-import { defaultShortcut } from "../keys.ts";
+import { defaultShortcut, isStripCode, usedByShortcut } from "../keys.ts";
 import {
   type AppState,
+  type CustomKey,
   type GuardStatus,
   KEY_IDS,
   type KeyId,
+  MAX_CUSTOM_KEYS,
   type Platform,
   type ThemePref,
 } from "../types.ts";
@@ -28,6 +30,8 @@ export function createMockBackend(): Backend {
   const garde = params.get("garde");
   const langue = params.get("langue");
   const maj = params.get("maj");
+  const perso = Number(params.get("perso") ?? 0);
+  const sample: CustomKey[] = [..."QWERTYUIOPASDFGHJLZXCVBNM"].map((c) => ({ code: `Key${c}` }));
   const guard: GuardStatus =
     garde === "accessibilite"
       ? { kind: "needsAccessibility" }
@@ -46,6 +50,7 @@ export function createMockBackend(): Backend {
   const state: AppState = {
     mode: etat === "pause" ? "off" : etat === "tout" ? "all" : "fkeys",
     blocked: [...all, "PrintScreen", "ScrollLock", "Pause"],
+    customKeys: sample.slice(0, Math.min(perso, MAX_CUSTOM_KEYS)),
     shortcut: defaultShortcut(platform),
     settings: {
       skin: isSkinId(pelage) ? pelage : "noir",
@@ -93,6 +98,18 @@ export function createMockBackend(): Backend {
     setAllKeys: async (blocked) => {
       if (state.mode === "all") return;
       state.blocked = blocked ? [...KEY_IDS] : [];
+      emit();
+    },
+    addCustomKey: async (key) => {
+      if (isStripCode(key.code)) throw "inStrip";
+      if (usedByShortcut(key.code, state.shortcut)) throw "shortcut";
+      if (state.customKeys.some((k) => k.code === key.code)) throw "duplicate";
+      if (state.customKeys.length >= MAX_CUSTOM_KEYS) throw "full";
+      state.customKeys = [...state.customKeys, key];
+      emit();
+    },
+    removeCustomKey: async (code) => {
+      state.customKeys = state.customKeys.filter((k) => k.code !== code);
       emit();
     },
     beginShortcutCapture: async () => {},

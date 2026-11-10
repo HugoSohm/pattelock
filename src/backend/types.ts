@@ -1,5 +1,5 @@
 import type { Lang } from "../i18n.ts";
-import type { AppState, KeyId, KeyIntercepted, Settings, Shortcut } from "../types.ts";
+import type { AppState, CustomKey, KeyId, KeyIntercepted, Settings, Shortcut } from "../types.ts";
 
 /** Tout ce que l'UI demande au cœur de l'app (le Rust). L'état fait foi côté Rust. */
 export interface Backend {
@@ -22,6 +22,9 @@ export interface Backend {
   toggleKey(id: KeyId): Promise<void>;
   /** Coche ou décoche toutes les touches de la bande. */
   setAllKeys(blocked: boolean): Promise<void>;
+  /** Ajoute une touche supplémentaire ; rejette avec un code si elle est refusée. */
+  addCustomKey(key: CustomKey): Promise<void>;
+  removeCustomKey(code: string): Promise<void>;
 
   /** Suspend le raccourci global pendant l'enregistrement d'un nouveau. */
   beginShortcutCapture(): Promise<void>;

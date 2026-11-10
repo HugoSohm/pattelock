@@ -3,6 +3,7 @@ mod commands;
 mod core;
 mod counter;
 mod cursor;
+mod custom_keys;
 mod hotkey;
 mod keyguard;
 mod settings;
@@ -80,6 +81,8 @@ pub fn run() {
             commands::toggle_lock_all,
             commands::toggle_key,
             commands::set_all_keys,
+            commands::add_custom_key,
+            commands::remove_custom_key,
             commands::update_settings,
             commands::set_shortcut,
             commands::begin_shortcut_capture,

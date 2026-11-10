@@ -85,6 +85,12 @@ pub fn judge(shared: &Shared, tracker: &mut ModTracker, code: u16, value: i32) -
                 }
                 Verdict::Swallow
             }
+            None if shared.blocks_custom(u32::from(code)) => {
+                if value == 1 {
+                    shared.intercepted_custom();
+                }
+                Verdict::Swallow
+            }
             _ => Verdict::Forward,
         },
         GuardMode::All => {
@@ -352,10 +358,26 @@ mod tests {
         s.set(
             mode,
             mask_of(&[BlockableKey::F1]),
+            &[KEY_SPACE],
             &Shortcut::default(),
             true,
         );
         (s, rx)
+    }
+
+    const KEY_SPACE: u32 = 57;
+
+    #[test]
+    fn fkeys_mode_swallows_custom_keys() {
+        let (s, rx) = shared(GuardMode::FKeys);
+        let mut t = ModTracker::default();
+        assert_eq!(judge(&s, &mut t, 57, 1), Verdict::Swallow);
+        assert_eq!(judge(&s, &mut t, 57, 0), Verdict::Swallow);
+        assert_eq!(judge(&s, &mut t, 30, 1), Verdict::Forward);
+        assert_eq!(rx.try_recv(), Ok(GuardEvent::Intercepted { key: "custom" }));
+        assert!(rx.try_recv().is_err());
+        let (s, _rx) = shared(GuardMode::Off);
+        assert_eq!(judge(&s, &mut t, 57, 1), Verdict::Forward);
     }
 
     #[test]

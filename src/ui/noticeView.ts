@@ -1,6 +1,6 @@
 import { t } from "../i18n.ts";
-import { keyGroups } from "../keys.ts";
-import type { GuardStatus, Platform, ShortcutErrorCode } from "../types.ts";
+import { customKeyLabel, keyGroups } from "../keys.ts";
+import type { CustomKey, GuardStatus, Platform, ShortcutErrorCode } from "../types.ts";
 import { h } from "./dom.ts";
 import { paw } from "./icons.ts";
 
@@ -45,7 +45,7 @@ export function createNoticeView(onOpenSettings: () => void, onRetry: () => void
 }
 
 /** Bandeau discret sous le compteur quand le blocage est partiel ou impossible. */
-export function guardBanner(guard: GuardStatus, platform: Platform): string | null {
+export function guardBanner(guard: GuardStatus, platform: Platform, customKeys: CustomKey[]): string | null {
   if (guard.kind === "unavailable") {
     const reason = t(`reason.${guard.reason}`);
     return guard.detail ? `${reason} (${guard.detail})` : reason;
@@ -56,7 +56,11 @@ export function guardBanner(guard: GuardStatus, platform: Platform): string | nu
         .flat()
         .flatMap((g) => g.map((k) => [k.id, k.name] as const)),
     );
-    const keys = guard.unavailable.map((k) => names.get(k) ?? k).join(", ");
+    const custom = (guard.custom ?? []).map((code) => {
+      const k = customKeys.find((c) => c.code === code);
+      return customKeyLabel(k ?? { code }, platform);
+    });
+    const keys = [...guard.unavailable.map((k) => names.get(k) ?? k), ...custom].join(", ");
     return t("reason.partial", { keys });
   }
   return null;

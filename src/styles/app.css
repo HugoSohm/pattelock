@@ -142,6 +142,11 @@ canvas {
 /* ---------- Écran principal ---------- */
 .body {
   flex: 1;
+  min-height: 0;
+  /* Rangée des touches ajoutées dépliée : la page défile plutôt que de déborder. */
+  overflow: hidden auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--key-edge) transparent;
   padding: 1.25rem 2rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -345,6 +350,78 @@ canvas {
 .key[aria-disabled="true"] {
   cursor: default;
 }
+/*
+ * Touches ajoutées : une rangée qui prend toute la largeur de la bande sans l'élargir
+ * (largeur propre nulle). Repliée sur une ligne, dépliée (.open) sur plusieurs.
+ */
+.krow.custom {
+  width: 0;
+  min-width: 100%;
+  justify-content: center;
+  gap: 0.5rem 0.25rem;
+}
+.krow.custom.open {
+  flex-wrap: wrap;
+}
+.krow.custom .key {
+  flex-shrink: 0;
+}
+.key.ckey {
+  width: auto;
+  min-width: 2.875rem;
+  padding: 0 0.5rem;
+}
+.key .sym {
+  font-family: "Silkscreen", monospace;
+}
+.key .kx {
+  position: absolute;
+  right: 0.1875rem;
+  top: 0.1875rem;
+  display: none;
+  line-height: 0;
+}
+.kx svg {
+  width: 0.375rem;
+  height: 0.375rem;
+}
+.key.ckey:not([aria-disabled="true"]):is(:hover, :focus-visible) .kx {
+  display: block;
+}
+.key.ckey:not([aria-disabled="true"]):is(:hover, :focus-visible) .kled {
+  display: none;
+}
+.key.more {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 0.125rem var(--key-edge);
+}
+.key.more:hover {
+  box-shadow: inset 0 0 0 0.125rem var(--ink);
+}
+/* « + Touche » : emplacement vide, contour en pointillés pixel (dégradés nets, pas de border dashed). */
+.key.add {
+  --dash: var(--key-edge);
+  width: auto;
+  padding: 0 0.625rem;
+  color: var(--muted);
+  background:
+    linear-gradient(90deg, var(--dash) 50%, transparent 0) top left / 0.5rem 0.125rem repeat-x,
+    linear-gradient(90deg, var(--dash) 50%, transparent 0) bottom left / 0.5rem 0.125rem repeat-x,
+    linear-gradient(180deg, var(--dash) 50%, transparent 0) top left / 0.125rem 0.5rem repeat-y,
+    linear-gradient(180deg, var(--dash) 50%, transparent 0) top right / 0.125rem 0.5rem repeat-y;
+}
+.key.add:not(:disabled):hover {
+  --dash: var(--ink);
+  color: var(--ink);
+}
+.key.add.recording {
+  --dash: var(--accent);
+  color: var(--ink);
+}
+.key.add:disabled {
+  opacity: 0.45;
+}
 
 /* ---------- Légende et statistique ---------- */
 /* « Tout sélectionner » : bouton texte discret, au-dessus du bord droit de la bande. */
@@ -494,6 +571,108 @@ kbd.sym {
   opacity: 0.45;
 }
 
+/* ---------- Carte d'erreur d'une touche refusée ---------- */
+/* Flottante en haut au centre, sous la barre de titre (comme la mise à jour) : elle ne
+   pousse rien hors de la fenêtre et ne cache ni la bande ni le pied de page. */
+.ccard {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 3.25rem;
+  z-index: 10;
+  width: fit-content;
+  max-width: 40rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.375rem 0.625rem 0.75rem;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow:
+    inset 0 0 0 0.125rem var(--ink),
+    0.25rem 0.25rem 0 0 var(--accent);
+  animation: toast-in 0.24s steps(3) both;
+}
+/* Conflit avec le raccourci : la carte secoue, d'un pixel à la fois. */
+.ccard.shake {
+  animation:
+    toast-in 0.24s steps(3) both,
+    pl-shake 0.36s steps(1) 0.24s;
+}
+@keyframes pl-shake {
+  0% {
+    transform: translateX(-0.125rem);
+  }
+  25% {
+    transform: translateX(0.125rem);
+  }
+  50% {
+    transform: translateX(-0.125rem);
+  }
+  75% {
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccard,
+  .ccard.shake {
+    animation: none;
+  }
+}
+.ccard-ico {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #1f1b24;
+  font-family: "Silkscreen", monospace;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+.ccard-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ccard-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.ccard-text {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.ccard-text kbd {
+  font-size: 0.75rem;
+  padding: 0.0625rem 0.3125rem 0.1875rem;
+}
+.ccard-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  vertical-align: middle;
+  margin: 0 0.125rem;
+}
+kbd.hit {
+  background: var(--accent);
+  color: #1f1b24;
+  box-shadow: inset 0 -0.1875rem 0 0 rgba(0, 0, 0, 0.22);
+}
+.ccard .change {
+  flex-shrink: 0;
+  height: 1.75rem;
+  margin-left: 0;
+  font-size: 0.75rem;
+}
+
 /* Mise à jour disponible, sous le compteur. */
 /* Notification flottante, en haut au centre sous la barre de titre. */
 .update-bar {
@@ -528,6 +707,7 @@ kbd.sym {
   }
 }
 .toast-close {
+  flex-shrink: 0;
   width: 1.75rem;
   height: 1.75rem;
   padding: 0;

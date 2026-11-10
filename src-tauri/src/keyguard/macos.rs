@@ -88,7 +88,13 @@ fn key_event(shared: &Shared, ev: &CGEvent, down: bool) -> bool {
                 }
             });
             let Some(key) = key else {
-                return false;
+                if !shared.blocks_custom(u32::from(code)) {
+                    return false;
+                }
+                if first_press {
+                    shared.intercepted_custom();
+                }
+                return true;
             };
             if !shared.is_blocked(key) {
                 return false;
@@ -116,14 +122,30 @@ fn key_event(shared: &Shared, ev: &CGEvent, down: bool) -> bool {
 fn flags_changed(shared: &Shared, ev: &CGEvent) -> bool {
     let flags = CGEvent::flags(Some(ev)).0 & MOD_FLAGS;
     let prev = PREV_FLAGS.replace(flags);
-    if shared.mode() != GuardMode::All {
-        return false;
-    }
     // Un modificateur vient d'être enfoncé : c'est aussi un coup de patte.
-    if flags & !prev != 0 {
-        shared.intercepted(None);
+    let pressed = flags & !prev != 0;
+    match shared.mode() {
+        GuardMode::Off => false,
+        // Modificateur ajouté comme touche (Maj, Cmd...). Le système garde l'état du
+        // modificateur : seul l'événement est avalé.
+        GuardMode::FKeys => {
+            let code =
+                CGEvent::integer_value_field(Some(ev), CGEventField::KeyboardEventKeycode) as u16;
+            if !shared.blocks_custom(u32::from(code)) {
+                return false;
+            }
+            if pressed {
+                shared.intercepted_custom();
+            }
+            true
+        }
+        GuardMode::All => {
+            if pressed {
+                shared.intercepted(None);
+            }
+            true
+        }
     }
-    true
 }
 
 fn system_defined(shared: &Shared, ev: &CGEvent) -> bool {

@@ -29,7 +29,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_SYSKEYDOWN,
 };
 
-use super::combo::{windows_native, ComboEvent, ModKey, ModTracker};
+use super::combo::{windows_native, windows_vk_native, ComboEvent, ModKey, ModTracker};
 use super::keys::from_windows;
 use super::{GuardMode, GuardStatus, KeyGuard, Reason, Shared};
 
@@ -100,7 +100,16 @@ fn decide(shared: &Shared, kb: &KBDLLHOOKSTRUCT, down: bool) -> bool {
             GuardMode::Off => false,
             GuardMode::FKeys => {
                 let Some(key) = from_windows(vk, kb.scanCode as u16, ext) else {
-                    return false;
+                    // Touche supplémentaire, reconnue par sa position (scancode), ou
+                    // modificateur, reconnu par virtual-key.
+                    if !shared.blocks_custom(native) && !shared.blocks_custom(windows_vk_native(vk))
+                    {
+                        return false;
+                    }
+                    if first_press {
+                        shared.intercepted_custom();
+                    }
+                    return true;
                 };
                 if shared.mask() & key.bit() == 0 {
                     return false;

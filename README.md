@@ -23,6 +23,7 @@
 ### ✨ Features
 
 - 🐾 **System-wide blocking**: Esc, F1 to F12, Print Screen, Scroll Lock, Pause the navigation block (Insert, Home, Page Up, Delete, End, Page Down) and the numeric keypad are swallowed even when Pattelock is in the background. Click a key on the strip to block or free it. The top row is blocked by default.
+- ➕ **Your own keys**: add any other key (a letter, Space, Enter, an arrow, Shift, Win, Caps Lock...) with "+ Key", then press it. Click an added key to remove it.
 - 😺 **The cat is the switch**: it sleeps while protection is on and wakes up when it's paused. Click it to toggle.
 - 🔒 **Lock the whole keyboard**: every key is ignored except the unlock shortcut. Get out with the "Unlock keyboard" button, by clicking the cat, with the shortcut or from the tray.
 - ⌨️ **Global shortcut**: `Ctrl + Alt + K` (`Cmd + Option + K` on macOS) toggles protection from anywhere. Change it with one click.
@@ -93,6 +94,7 @@ You can never get locked out:
 - **Windows**: when a window running as administrator has focus, Windows does not send keys to Pattelock's hook.
 - **macOS**: Macs have no Print Screen, Scroll Lock or Pause keys, so they become F13, F14 and F15, and Insert is the Help key. The top row often sends media functions (brightness, volume): the "also block media functions" option (on by default) blocks them along with the matching F key. During secure input (password fields), macOS hides keystrokes from all apps. Some keys (Globe / fn) are handled below Pattelock.
 - **Linux X11**: a key already reserved by your desktop (often Print Screen for screenshots) cannot be blocked. Pattelock tells you which ones.
+- **Added modifier keys** (Shift, Ctrl, Alt, Win / Cmd, Caps Lock): fully blocked on Windows and Wayland. On macOS and X11 the key press is swallowed but the system still applies the modifier (Caps Lock still toggles). Keys used by the on/off shortcut cannot be added, and Fn cannot be blocked at all: it never reaches the system.
 
 ---
 

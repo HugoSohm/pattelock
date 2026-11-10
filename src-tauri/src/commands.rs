@@ -6,6 +6,7 @@ use tauri::{AppHandle, State};
 
 use crate::core::{AppState, Core};
 use crate::cursor::CursorFollow;
+use crate::custom_keys::CustomKey;
 use crate::keyguard::keys::BlockableKey;
 use crate::settings::{Lang, SettingsPatch};
 use crate::shortcut::Shortcut;
@@ -37,6 +38,17 @@ pub fn toggle_key(core: CoreState<'_>, key: BlockableKey) {
 #[tauri::command]
 pub fn set_all_keys(core: CoreState<'_>, blocked: bool) {
     core.set_all_keys(blocked);
+}
+
+/// Rejette avec un code (`inStrip`, `duplicate`...) si la touche est refusée.
+#[tauri::command]
+pub fn add_custom_key(core: CoreState<'_>, key: CustomKey) -> Result<(), String> {
+    core.add_custom_key(key).map_err(|e| e.code().to_string())
+}
+
+#[tauri::command]
+pub fn remove_custom_key(core: CoreState<'_>, code: String) {
+    core.remove_custom_key(&code);
 }
 
 #[tauri::command]

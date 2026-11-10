@@ -155,9 +155,23 @@ impl X11Guard {
                         refused.push(key);
                     }
                 }
-                if !refused.is_empty() {
+                let mut custom_refused = Vec::new();
+                for native in self.shared.custom_natives() {
+                    let Ok(code) = u16::try_from(native) else {
+                        continue;
+                    };
+                    let kc = keycode(code);
+                    if self.grab_key(kc) {
+                        grabs.keys.push(kc);
+                    } else {
+                        custom_refused.push(native);
+                    }
+                }
+                if !refused.is_empty() || !custom_refused.is_empty() {
                     status = GuardStatus::Partial {
                         unavailable: refused,
+                        custom_natives: custom_refused,
+                        custom: Vec::new(),
                     };
                 }
             }
@@ -218,7 +232,11 @@ fn event_loop(conn: Arc<RustConnection>, shared: Arc<Shared>, status: Arc<Mutex<
                         continue;
                     }
                 }
-                shared.intercepted(key);
+                if key.is_none() && shared.blocks_custom(u32::from(evdev)) {
+                    shared.intercepted_custom();
+                } else {
+                    shared.intercepted(key);
+                }
             }
             Event::KeyRelease(e) => last_release = Some((e.detail, e.time)),
             _ => {}

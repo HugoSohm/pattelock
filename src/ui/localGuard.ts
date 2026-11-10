@@ -37,18 +37,19 @@ export function keyIdOf(code: string, mac: boolean): KeyId | null {
 export function installLocalGuard(
   state: () => AppState,
   recording: () => boolean,
-  report: (key: KeyId | "other") => void,
+  report: (key: KeyId | "custom" | "other") => void,
 ): void {
   const handle = (e: KeyboardEvent) => {
     if (recording()) return;
     const s = state();
     if (s.mode === "off") return;
     const id = keyIdOf(e.code, s.platform === "macos");
-    const block = s.mode === "all" || (id !== null && s.blocked.includes(id));
+    const custom = id === null && s.customKeys.some((k) => k.code === e.code);
+    const block = s.mode === "all" || custom || (id !== null && s.blocked.includes(id));
     if (!block) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    if (e.type === "keydown" && !e.repeat) report(id ?? "other");
+    if (e.type === "keydown" && !e.repeat) report(id ?? (custom ? "custom" : "other"));
   };
   window.addEventListener("keydown", handle, { capture: true });
   window.addEventListener("keyup", handle, { capture: true });

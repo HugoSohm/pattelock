@@ -116,6 +116,28 @@ pub fn native_code(code: &str) -> Option<u32> {
     return super::keys::evdev_code(code).map(u32::from);
 }
 
+/// Code natif d'une touche supplémentaire pour l'OS courant, au même format que
+/// [`native_code`].
+pub fn custom_native_code(code: &str) -> Option<u32> {
+    #[cfg(windows)]
+    return super::keys::windows_modifier_vk(code)
+        .map(|vk| windows_vk_native(u32::from(vk)))
+        .or_else(|| {
+            super::keys::windows_custom_scancode(code).map(|(sc, ext)| windows_native(sc, ext))
+        });
+    #[cfg(target_os = "macos")]
+    return super::keys::macos_custom_keycode(code).map(u32::from);
+    #[cfg(not(any(windows, target_os = "macos")))]
+    return super::keys::evdev_custom_code(code).map(u32::from);
+}
+
+/// Code natif Windows d'un modificateur, reconnu par virtual-key (bit 16, hors de
+/// l'espace des scancodes).
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn windows_vk_native(vk: u32) -> u32 {
+    0x1_0000 | vk
+}
+
 /// Code natif Windows : scancode, avec le bit 8 pour les touches étendues.
 #[cfg_attr(not(windows), allow(dead_code))]
 pub fn windows_native(scancode: u16, extended: bool) -> u32 {

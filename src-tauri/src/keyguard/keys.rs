@@ -552,9 +552,100 @@ pub fn evdev_code(code: &str) -> Option<u16> {
     })
 }
 
+/// Touches utilisables seulement comme touches supplémentaires (pas comme raccourci, le
+/// plugin global-shortcut ne les connaît pas) : code, scancode Windows, étendu, keycode
+/// macOS, code evdev. `IntlBackslash` est la touche < > des claviers ISO.
+const CUSTOM_ONLY: [(&str, u16, bool, u16, u16); 1] = [("IntlBackslash", 0x56, false, 0x0A, 86)];
+
+fn custom_only(code: &str) -> Option<&'static (&'static str, u16, bool, u16, u16)> {
+    CUSTOM_ONLY.iter().find(|k| k.0 == code)
+}
+
+/// Modificateurs et Verr. Maj, utilisables comme touches supplémentaires s'ils ne servent
+/// pas au raccourci : code, virtual-key Windows (`VK_LSHIFT`...), keycode macOS, code evdev.
+/// Sous Windows, on les reconnaît par virtual-key : leurs scancodes et l'indicateur
+/// « étendu » varient (AltGr, Maj droite).
+const MODIFIER_KEYS: [(&str, u8, u16, u16); 9] = [
+    ("ShiftLeft", 0xA0, 0x38, 42),
+    ("ShiftRight", 0xA1, 0x3C, 54),
+    ("ControlLeft", 0xA2, 0x3B, 29),
+    ("ControlRight", 0xA3, 0x3E, 97),
+    ("AltLeft", 0xA4, 0x3A, 56),
+    ("AltRight", 0xA5, 0x3D, 100),
+    ("MetaLeft", 0x5B, 0x37, 125),
+    ("MetaRight", 0x5C, 0x36, 126),
+    ("CapsLock", 0x14, 0x39, 58),
+];
+
+fn modifier_key(code: &str) -> Option<&'static (&'static str, u8, u16, u16)> {
+    MODIFIER_KEYS.iter().find(|k| k.0 == code)
+}
+
+/// Virtual-key Windows d'un modificateur (ou de Verr. Maj) ajouté comme touche.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn windows_modifier_vk(code: &str) -> Option<u8> {
+    modifier_key(code).map(|k| k.1)
+}
+
+/// Scancode Windows d'une touche supplémentaire (touches de raccourci comprises).
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn windows_custom_scancode(code: &str) -> Option<(u16, bool)> {
+    windows_scancode(code).or_else(|| custom_only(code).map(|k| (k.1, k.2)))
+}
+
+/// Keycode macOS d'une touche supplémentaire.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub fn macos_custom_keycode(code: &str) -> Option<u16> {
+    macos_shortcut_keycode(code)
+        .or_else(|| custom_only(code).map(|k| k.3))
+        .or_else(|| modifier_key(code).map(|k| k.2))
+}
+
+/// Code evdev d'une touche supplémentaire.
+#[cfg_attr(any(windows, target_os = "macos"), allow(dead_code))]
+pub fn evdev_custom_code(code: &str) -> Option<u16> {
+    evdev_code(code)
+        .or_else(|| custom_only(code).map(|k| k.4))
+        .or_else(|| modifier_key(code).map(|k| k.3))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn custom_tables_cover_the_iso_key() {
+        assert_eq!(
+            windows_custom_scancode("IntlBackslash"),
+            Some((0x56, false))
+        );
+        assert_eq!(macos_custom_keycode("IntlBackslash"), Some(0x0A));
+        assert_eq!(evdev_custom_code("IntlBackslash"), Some(86));
+        // Pas dans les tables du raccourci.
+        assert_eq!(windows_scancode("IntlBackslash"), None);
+        assert_eq!(evdev_custom_code("KeyA"), Some(30));
+        assert_eq!(windows_custom_scancode("ArrowUp"), Some((0x48, true)));
+        assert_eq!(macos_custom_keycode("F1"), None);
+    }
+
+    #[test]
+    fn modifiers_are_custom_keys_only() {
+        assert_eq!(windows_modifier_vk("ShiftLeft"), Some(0xA0));
+        assert_eq!(windows_modifier_vk("AltRight"), Some(0xA5));
+        assert_eq!(windows_modifier_vk("KeyA"), None);
+        assert_eq!(macos_custom_keycode("MetaLeft"), Some(0x37));
+        assert_eq!(evdev_custom_code("CapsLock"), Some(58));
+        assert_eq!(evdev_custom_code("AltRight"), Some(100));
+        // Jamais comme touche principale du raccourci.
+        assert_eq!(evdev_code("ShiftLeft"), None);
+        assert_eq!(macos_shortcut_keycode("CapsLock"), None);
+        // Aucun code evdev ou macOS en double avec les autres touches.
+        for (code, _, mac, ev) in MODIFIER_KEYS {
+            assert_eq!(macos_shortcut_keycode(code), None);
+            assert_eq!(from_evdev_key(ev), None, "{code}");
+            assert_eq!(from_macos_keycode(mac), None, "{code}");
+        }
+    }
 
     #[test]
     fn ids_round_trip() {

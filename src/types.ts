@@ -32,6 +32,19 @@ export const KEY_IDS = [
 ] as const;
 export type KeyId = (typeof KEY_IDS)[number];
 
+/** Touche supplémentaire, bloquée en plus de la bande. `code` est un `KeyboardEvent.code`. */
+export interface CustomKey {
+  code: string;
+  /** Libellé de la touche sur le clavier de l'utilisateur (AZERTY...), s'il est connu. */
+  label?: string;
+}
+
+/** Nombre maximal de touches supplémentaires (même valeur que le Rust). */
+export const MAX_CUSTOM_KEYS = 24;
+
+/** Raisons d'un refus de touche supplémentaire (renvoyées par le Rust, traduites par le front). */
+export type CustomKeyErrorCode = "inStrip" | "unsupported" | "shortcut" | "duplicate" | "full" | "refused";
+
 /** Raccourci global. `key` est un `KeyboardEvent.code` (ex. `KeyK`). */
 export interface Shortcut {
   ctrl: boolean;
@@ -66,7 +79,7 @@ export type GuardStatus =
   | { kind: "needsAccessibility" }
   | { kind: "needsInputGroup"; command: string }
   | { kind: "unavailable"; reason: UnavailableReason; detail?: string }
-  | { kind: "partial"; unavailable: KeyId[] };
+  | { kind: "partial"; unavailable: KeyId[]; custom?: string[] };
 
 /** Raisons d'un refus de raccourci (renvoyées par le Rust, traduites par le front). */
 export type ShortcutErrorCode =
@@ -75,6 +88,7 @@ export type ShortcutErrorCode =
   | "blockable"
   | "unsupported"
   | "taken"
+  | "customKey"
   | "refused";
 
 export interface Settings {
@@ -98,6 +112,7 @@ export interface UpdateInfo {
 export interface AppState {
   mode: Mode;
   blocked: KeyId[];
+  customKeys: CustomKey[];
   shortcut: Shortcut;
   settings: Settings;
   total: number;
