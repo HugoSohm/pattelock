@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - Block any other key too: click "+ Key" under the strip and press the key (letters, digits, Space, Enter, arrows, Shift, Win, Caps Lock, AltGr...). Up to 24 added keys, removed with a click. When they don't fit on one row, a "+N" button shows the rest.
 - Keys used by the on/off shortcut cannot be added: a message explains why and lets you change the shortcut.
