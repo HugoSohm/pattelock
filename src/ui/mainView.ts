@@ -335,12 +335,11 @@ export function createMainView(handlers: MainHandlers): MainView {
         return i === 0 ? [k] : [h("span", { text: "+" }), k];
       }),
     );
-    // Le texte est découpé autour de {key} et {sc} pour les afficher comme des touches.
-    const marks: Record<string, Node> = { "\u0000": kbd(customKeyLabel(key, s.platform)), "\u0001": sc };
-    const raw = t(`customError.${error}`, { key: "\u0000", sc: "\u0001", max: MAX_CUSTOM_KEYS });
-    const body = raw
-      .split(/([\u0000\u0001])/)
-      .map((part) => marks[part] ?? document.createTextNode(part));
+    // Le texte est découpé autour de {key} et {sc} pour les afficher comme des touches :
+    // `t` laisse en place les paramètres qu'on ne lui passe pas.
+    const marks: Record<string, Node> = { "{key}": kbd(customKeyLabel(key, s.platform)), "{sc}": sc };
+    const raw = t(`customError.${error}`, { max: MAX_CUSTOM_KEYS });
+    const body = raw.split(/(\{key\}|\{sc\})/).map((part) => marks[part] ?? document.createTextNode(part));
     cardBody.replaceChildren(
       h("p", { class: "ccard-title", text: t(`customError.${error}.title`) }),
       h("p", { class: "ccard-text" }, ...body),

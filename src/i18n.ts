@@ -57,8 +57,7 @@ const fr = {
   "customError.unsupported.title": "Touche non prise en charge",
   "customError.unsupported": "Pattelock ne sait pas bloquer {key} sur ce système.",
   "customError.shortcut.title": "Touche réservée au raccourci",
-  "customError.shortcut":
-    "{key} sert au raccourci {sc}, qui endort et réveille le chat.",
+  "customError.shortcut": "{key} sert au raccourci {sc}, qui endort et réveille le chat.",
   "customError.duplicate.title": "Déjà ajoutée",
   "customError.duplicate": "{key} est déjà dans tes touches.",
   "customError.full.title": "Liste pleine",
@@ -230,8 +229,7 @@ const en: Record<TextKey, string> = {
   "customError.unsupported.title": "Key not supported",
   "customError.unsupported": "Pattelock cannot block {key} on this system.",
   "customError.shortcut.title": "Key reserved for the shortcut",
-  "customError.shortcut":
-    "{key} is part of {sc}, the shortcut that wakes the cat.",
+  "customError.shortcut": "{key} is part of {sc}, the shortcut that wakes the cat.",
   "customError.duplicate.title": "Already added",
   "customError.duplicate": "{key} is already in your keys.",
   "customError.full.title": "List full",
